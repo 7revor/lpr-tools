@@ -25,19 +25,14 @@ function getEffectiveRate(dateStr, lprData, multipliers, lprMode, lprTerm = "1y"
   return { lpr, finalRate, multiplierLabel };
 }
 
-function makeEventRow(date, type, amount, principal, note) {
+// 借款/事件行基础模板，interestBalance 传入当前利息结余
+function makeEventRow(date, type, amount, principal, note, interestBalance = 0) {
   return {
-    date,
-    type,
-    amount,
-    principal,
-    lprBase: "-",
-    multiplierLabel: "-",
-    rate: "-",
-    days: "-",
-    interest: "-",
-    note,
-    isEvent: true,
+    date, type, amount, principal,
+    interestOffset: "-", principalOffset: "-",
+    lprBase: "-", multiplierLabel: "-", rate: "-", days: "-", interest: "-",
+    interestBalance: interestBalance.toFixed(2),
+    note, isEvent: true,
   };
 }
 
@@ -90,6 +85,7 @@ export function calculate({
   let totalInterestPaid = 0;
   let totalLoan = 0;
   let totalRepay = 0;
+  let totalPrincipalPaid = 0;
   let eventIdx = 0;
 
   function appendInterestPeriod(curDate, nextDate) {
@@ -121,12 +117,15 @@ export function calculate({
       date: `${curDate} 至 ${nextDate}`,
       type: "计息",
       amount: "-",
+      interestOffset: "-",
+      principalOffset: "-",
       principal,
       lprBase,
       multiplierLabel,
       rate: annualRate.toFixed(4),
       days,
       interest: interest.toFixed(2),
+      interestBalance: accruedInterest.toFixed(2),
       note: "",
       isEvent: false,
     });
@@ -141,70 +140,50 @@ export function calculate({
         if (ev.type === "loan") {
           principal += ev.amount;
           totalLoan += ev.amount;
-          rows.push(makeEventRow(curDate, "借款", ev.amount, principal, ev.note));
+          rows.push(makeEventRow(curDate, "借款", ev.amount, principal, ev.note, accruedInterest));
         } else {
           const repayAmount = ev.amount;
           totalRepay += repayAmount;
 
+          let interestPaid = 0;
+          let principalPaid = 0;
+
           if (ev.mode === "先息后本") {
-            const interestPaid = Math.min(repayAmount, accruedInterest);
+            interestPaid = Math.min(repayAmount, accruedInterest);
             accruedInterest -= interestPaid;
             totalInterestPaid += interestPaid;
             const remaining = repayAmount - interestPaid;
-            const principalPaid = Math.min(remaining, principal);
+            principalPaid = Math.min(remaining, principal);
             principal -= principalPaid;
             if (principal < 0) principal = 0;
-            const isSplit = interestPaid > 0 && principalPaid > 0;
-            const firstNote = isSplit ? `${ev.mode}，本次还款共${repayAmount.toFixed(2)}元` : ev.note || ev.mode;
-            if (interestPaid > 0) {
-              rows.push({
-                ...makeEventRow(curDate, "还款(冲息)", interestPaid, principal + principalPaid, firstNote),
-                interest: (-interestPaid).toFixed(2),
-              });
-            }
-            if (principalPaid > 0) {
-              rows.push(
-                makeEventRow(
-                  curDate,
-                  "还款(还本)",
-                  principalPaid,
-                  principal,
-                  isSplit && interestPaid > 0 ? "" : ev.note || ev.mode,
-                ),
-              );
-            }
-            if (interestPaid === 0 && principalPaid === 0) {
-              rows.push(makeEventRow(curDate, "还款", repayAmount, principal, ev.note || ev.mode));
-            }
           } else {
-            const principalPaid = Math.min(repayAmount, principal);
+            // 先本后息
+            principalPaid = Math.min(repayAmount, principal);
             principal -= principalPaid;
             if (principal < 0) principal = 0;
             const remaining = repayAmount - principalPaid;
-            const interestPaid = Math.min(remaining, accruedInterest);
+            interestPaid = Math.min(remaining, accruedInterest);
             accruedInterest -= interestPaid;
             totalInterestPaid += interestPaid;
-            const isSplit = principalPaid > 0 && interestPaid > 0;
-            const firstNote = isSplit ? `${ev.mode}，本次还款共${repayAmount.toFixed(2)}元` : ev.note || ev.mode;
-            if (principalPaid > 0) {
-              rows.push(makeEventRow(curDate, "还款(还本)", principalPaid, principal, firstNote));
-            }
-            if (interestPaid > 0) {
-              rows.push({
-                ...makeEventRow(
-                  curDate,
-                  "还款(冲息)",
-                  interestPaid,
-                  principal,
-                  isSplit && principalPaid > 0 ? "" : ev.note || ev.mode,
-                ),
-                interest: (-interestPaid).toFixed(2),
-              });
-            }
-            if (principalPaid === 0 && interestPaid === 0) {
-              rows.push(makeEventRow(curDate, "还款", repayAmount, principal, ev.note || ev.mode));
-            }
           }
+          totalPrincipalPaid += principalPaid;
+
+          rows.push({
+            date: curDate,
+            type: "还款",
+            amount: repayAmount,
+            interestOffset: interestPaid > 0 ? interestPaid.toFixed(2) : "-",
+            principalOffset: principalPaid > 0 ? principalPaid.toFixed(2) : "-",
+            principal,
+            lprBase: "-",
+            multiplierLabel: "-",
+            rate: "-",
+            days: "-",
+            interest: "-",
+            interestBalance: accruedInterest.toFixed(2),
+            note: ev.note || ev.mode,
+            isEvent: true,
+          });
         }
       }
       eventIdx++;
@@ -240,12 +219,15 @@ export function calculate({
           date: `${lastDate} 至 ${endDate}`,
           type: "计息",
           amount: "-",
+          interestOffset: "-",
+          principalOffset: "-",
           principal,
           lprBase,
           multiplierLabel,
           rate: annualRate.toFixed(4),
           days,
           interest: interest.toFixed(2),
+          interestBalance: accruedInterest.toFixed(2),
           note: "",
           isEvent: false,
         });
@@ -259,6 +241,7 @@ export function calculate({
     totalRepay,
     totalInterest: totalInterestAccrued,
     totalInterestPaid,
+    totalPrincipalPaid,
     remainPrincipal: principal,
     remainInterest: accruedInterest,
   };

@@ -1,5 +1,5 @@
-// 列数与表头一致（11 列），汇总行标签占第 10 列，数值占第 11 列
-const COL_COUNT = 11;
+// 列数与表头一致（14 列），汇总行标签占第 13 列，数值占第 14 列
+const COL_COUNT = 14;
 
 function summaryRow(label, value, separator) {
   const cells = Array(COL_COUNT).fill('');
@@ -16,7 +16,7 @@ export function copyTableAsText(result, separator = '\t') {
     remainPrincipal, remainInterest,
   } = result;
 
-  const header = ['序号', '日期/期间', '类型', '发生金额', '剩余本金', 'LPR(%)', '倍率/加点', '年利率(%)', '计息天数', '利息', '备注'];
+  const header = ['序号', '日期/期间', '类型', '发生金额', 'LPR(%)', '倍率/加点', '年利率(%)', '计息天数', '本期利息', '冲息', '利息结余', '还本', '剩余本金', '备注'];
   const lines = [header.join(separator)];
 
   rows.forEach((r, i) => {
@@ -25,12 +25,15 @@ export function copyTableAsText(result, separator = '\t') {
       r.date,
       r.type,
       r.amount === '-' ? '-' : Number(r.amount).toFixed(2),
-      Number(r.principal).toFixed(2),
       r.lprBase || '-',
       r.multiplierLabel || '-',
       r.rate,
       r.days,
       r.interest === '-' ? '-' : Number(r.interest).toFixed(2),
+      r.interestOffset === '-' ? '-' : Number(r.interestOffset).toFixed(2),
+      Number(r.interestBalance).toFixed(2),
+      r.principalOffset === '-' ? '-' : Number(r.principalOffset).toFixed(2),
+      Number(r.principal).toFixed(2),
       r.note || '',
     ];
     if (separator === ',') {

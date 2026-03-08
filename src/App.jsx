@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { ConfigProvider, App as AntdApp, Button, Space } from 'antd';
-import { ExportOutlined, ImportOutlined, DeleteOutlined } from '@ant-design/icons';
+import { ExportOutlined, ImportOutlined, DeleteOutlined, GithubOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
 import { DEFAULT_LPR } from './data/lpr';
 import { calculate } from './utils/calculate';
@@ -136,6 +136,16 @@ function LprCalc() {
       <header>
         <h1>LPR 借贷利息计算系统</h1>
         <p>支持多笔借款/还款、LPR分段倍率与固定利率、结果一键复制到Excel</p>
+        <a
+          className="github-link"
+          href="https://github.com/7revor/lpr-tools"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="在 GitHub 上查看源码"
+        >
+          <GithubOutlined />
+          <span>GitHub</span>
+        </a>
       </header>
 
       <div className="toolbar">

@@ -1,5 +1,21 @@
+// 列数与表头一致（11 列），汇总行标签占第 10 列，数值占第 11 列
+const COL_COUNT = 11;
+
+function summaryRow(label, value, separator) {
+  const cells = Array(COL_COUNT).fill('');
+  cells[COL_COUNT - 2] = label;
+  cells[COL_COUNT - 1] = value;
+  return cells.join(separator);
+}
+
 export function copyTableAsText(result, separator = '\t') {
-  const { rows, totalInterest, totalInterestPaid, remainInterest } = result;
+  const {
+    rows,
+    totalLoan, totalRepay,
+    totalInterest, totalInterestPaid,
+    remainPrincipal, remainInterest,
+  } = result;
+
   const header = ['序号', '日期/期间', '类型', '发生金额', '剩余本金', 'LPR(%)', '倍率/加点', '年利率(%)', '计息天数', '利息', '备注'];
   const lines = [header.join(separator)];
 
@@ -27,9 +43,15 @@ export function copyTableAsText(result, separator = '\t') {
     }
   });
 
-  lines.push(['', '', '', '', '', '', '', '', '利息合计（产生）', totalInterest.toFixed(2), ''].join(separator));
-  lines.push(['', '', '', '', '', '', '', '', '已还利息', `-${totalInterestPaid.toFixed(2)}`, ''].join(separator));
-  lines.push(['', '', '', '', '', '', '', '', '未还利息', remainInterest.toFixed(2), ''].join(separator));
+  // 汇总行与表格上方 summary-box 保持一致（同样 7 项、同样正负号）
+  lines.push(summaryRow('借款总额', totalLoan.toFixed(2), separator));
+  lines.push(summaryRow('还款总额', totalRepay.toFixed(2), separator));
+  lines.push(summaryRow('剩余本金', remainPrincipal.toFixed(2), separator));
+  lines.push(summaryRow('利息合计', totalInterest.toFixed(2), separator));
+  lines.push(summaryRow('已还利息', totalInterestPaid.toFixed(2), separator));
+  lines.push(summaryRow('未还利息', remainInterest.toFixed(2), separator));
+  lines.push(summaryRow('本息合计(未还)', (remainPrincipal + remainInterest).toFixed(2), separator));
+
   return lines.join('\n');
 }
 

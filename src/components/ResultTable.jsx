@@ -195,7 +195,7 @@ const ResultTable = memo(function ResultTable({ result, showToast }) {
                 index={9} align="right"
                 style={{ background: '#fff3cd', fontWeight: 600, color: '#e74c5f' }}
               >
-                -{totalInterestPaid.toFixed(2)}
+                {totalInterestPaid.toFixed(2)}
               </Table.Summary.Cell>
               <Table.Summary.Cell index={10} style={{ background: '#fff3cd' }} />
             </Table.Summary.Row>

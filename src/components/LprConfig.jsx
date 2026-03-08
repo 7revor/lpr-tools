@@ -1,10 +1,7 @@
-import { useRef, useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { Button, InputNumber, Radio, Input, Table, Space } from 'antd';
 import SmartDatePicker from './SmartDatePicker';
-import {
-  PlusOutlined, UploadOutlined, ReloadOutlined,
-  SnippetsOutlined, DeleteOutlined,
-} from '@ant-design/icons';
+import { PlusOutlined, ReloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { DEFAULT_LPR } from '../data/lpr';
 
 function parseLprText(text) {
@@ -79,20 +76,18 @@ const EditableDateCell = memo(function EditableDateCell({ initialValue, rowIdx, 
 const LprConfig = memo(function LprConfig({
   lprData, setLprData, multipliers, setMultipliers, lprMode, setLprMode, lprTerm, setLprTerm, showToast,
 }) {
-  const fileRef = useRef(null);
-  const [showPaste, setShowPaste] = useState(false);
   const [pasteText, setPasteText] = useState('');
 
   // 使用 useMemo，仅 lprData 变化时重新排序
   const sorted = useMemo(
-    () => [...lprData].sort((a, b) => a.date.localeCompare(b.date)),
+    () => [...lprData].sort((a, b) => b.date.localeCompare(a.date)),
     [lprData]
   );
 
   // 函数式更新 + useCallback，deps 为空，引用永远稳定
   const updateLpr = useCallback((idx, field, value) => {
     setLprData((prev) => {
-      const s = [...prev].sort((a, b) => a.date.localeCompare(b.date));
+      const s = [...prev].sort((a, b) => b.date.localeCompare(a.date));
       s[idx] = { ...s[idx], [field]: field === 'date' ? value : (value ?? 0) };
       return s;
     });
@@ -100,7 +95,7 @@ const LprConfig = memo(function LprConfig({
 
   const removeLpr = useCallback((idx) => {
     setLprData((prev) => {
-      const s = [...prev].sort((a, b) => a.date.localeCompare(b.date));
+      const s = [...prev].sort((a, b) => b.date.localeCompare(a.date));
       return s.filter((_, i) => i !== idx);
     });
   }, [setLprData]);
@@ -110,46 +105,11 @@ const LprConfig = memo(function LprConfig({
     setLprData((prev) => [...prev, { date: today, lpr1y: 3.10, lpr5y: 3.60 }]);
   }, [setLprData]);
 
-  const importLpr = useCallback((e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const content = ev.target.result;
-        if (file.name.endsWith('.json')) {
-          const data = JSON.parse(content);
-          if (Array.isArray(data)) {
-            setLprData(data.map((r) => ({
-              date: r.date,
-              lpr1y: +(r.lpr1y ?? r['1y'] ?? 0),
-              lpr5y: +(r.lpr5y ?? r['5y'] ?? 0),
-            })));
-            showToast('LPR数据导入成功');
-          }
-        } else {
-          const data = parseLprText(content);
-          if (data.length > 0) {
-            setLprData(data);
-            showToast(`LPR数据导入成功，共 ${data.length} 条`);
-          } else {
-            showToast('未识别到有效的LPR数据', 'warning');
-          }
-        }
-      } catch (err) {
-        showToast('导入失败: ' + err.message, 'error');
-      }
-      e.target.value = '';
-    };
-    reader.readAsText(file);
-  }, [setLprData, showToast]);
-
   const handlePasteImport = useCallback(() => {
     const data = parseLprText(pasteText);
     if (data.length > 0) {
       setLprData(data);
       setPasteText('');
-      setShowPaste(false);
       showToast(`LPR数据导入成功，共 ${data.length} 条`);
     } else {
       showToast('未识别到有效的LPR数据，请检查格式', 'warning');
@@ -220,35 +180,38 @@ const LprConfig = memo(function LprConfig({
       </div>
 
       <Space wrap style={{ marginBottom: 12 }}>
-        <Button size="small" icon={<PlusOutlined />} onClick={addLpr}>添加LPR记录</Button>
-        <Button size="small" icon={<UploadOutlined />} onClick={() => fileRef.current?.click()}>文件导入</Button>
-        <input ref={fileRef} type="file" accept=".json,.csv,.txt" style={{ display: 'none' }} onChange={importLpr} />
-        <Button size="small" icon={<SnippetsOutlined />} onClick={() => setShowPaste((v) => !v)}>
-          {showPaste ? '收起粘贴' : '粘贴导入'}
-        </Button>
+        <Button size="small" icon={<PlusOutlined />} onClick={addLpr}>添加记录</Button>
         <Button size="small" icon={<ReloadOutlined />} onClick={resetToDefault}>恢复默认</Button>
       </Space>
 
-      {showPaste && (
-        <div className="paste-area">
-          <p className="hint-text">
-            支持 Tab/逗号/分号 分隔，百分号可有可无。每行格式：<code>日期 1年期LPR 5年期LPR</code>
-          </p>
-          <Input.TextArea
-            value={pasteText}
-            onChange={(e) => setPasteText(e.target.value)}
-            placeholder={'2026-02-24\t3.00%\t3.50%\n2026-01-20\t3.00%\t3.50%'}
-            rows={5}
-            style={{ fontFamily: 'monospace', fontSize: 13 }}
-          />
-          <Space style={{ marginTop: 8 }}>
-            <Button type="primary" size="small" onClick={handlePasteImport} disabled={!pasteText.trim()}>
-              确认导入
-            </Button>
-            <Button size="small" onClick={() => { setPasteText(''); setShowPaste(false); }}>取消</Button>
-          </Space>
-        </div>
-      )}
+      <div className="paste-area">
+        <p className="hint-text">
+          如有更新，请访问{' '}
+          <a
+            href="https://www.boc.cn/fimarkets/lilv/fd32/201310/t20131031_2591219.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            中国银行官网
+          </a>
+          {' '}复制数据粘贴至下方输入框，支持 Tab/逗号/分号 分隔，百分号可有可无。格式：<code>日期 1年期 5年期</code>
+        </p>
+        <Input.TextArea
+          value={pasteText}
+          onChange={(e) => setPasteText(e.target.value)}
+          placeholder={'2026-02-24\t3.00%\t3.50%\n2026-01-20\t3.00%\t3.50%'}
+          rows={4}
+          style={{ fontFamily: 'monospace', fontSize: 13 }}
+        />
+        <Space style={{ marginTop: 8 }}>
+          <Button type="primary" size="small" onClick={handlePasteImport} disabled={!pasteText.trim()}>
+            确认导入
+          </Button>
+          <Button size="small" onClick={() => setPasteText('')} disabled={!pasteText.trim()}>
+            清空
+          </Button>
+        </Space>
+      </div>
 
       <Table
         dataSource={sorted}

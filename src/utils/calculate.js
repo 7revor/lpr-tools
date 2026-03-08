@@ -28,9 +28,9 @@ function getEffectiveRate(dateStr, lprData, multipliers, lprMode, lprTerm = "1y"
 // 借款/事件行基础模板，interestBalance 传入当前利息结余
 function makeEventRow(date, type, amount, principal, note, interestBalance = 0) {
   return {
-    date, type, amount, principal,
-    interestOffset: "-", principalOffset: "-",
-    lprBase: "-", multiplierLabel: "-", rate: "-", days: "-", interest: "-",
+    dateStart: date, dateEnd: "", type, amount, principal,
+    interestOffset: "", principalOffset: "",
+    lprBase: "", multiplierLabel: "", rate: "", days: "", interest: "",
     interestBalance: interestBalance.toFixed(2),
     note, isEvent: true,
   };
@@ -99,7 +99,7 @@ export function calculate({
     let annualRate, lprBase, multiplierLabel;
     if (rateType === "fixed") {
       annualRate = fixedRate;
-      lprBase = "-";
+      lprBase = "";
       multiplierLabel = "固定";
     } else {
       const r = getEffectiveRate(curDate, lprData, multipliers, lprMode, lprTerm);
@@ -114,11 +114,11 @@ export function calculate({
     totalInterestAccrued += interest;
 
     rows.push({
-      date: `${curDate} 至 ${nextDate}`,
+      dateStart: curDate, dateEnd: nextDate,
       type: "计息",
-      amount: "-",
-      interestOffset: "-",
-      principalOffset: "-",
+      amount: "",
+      interestOffset: "",
+      principalOffset: "",
       principal,
       lprBase,
       multiplierLabel,
@@ -169,17 +169,17 @@ export function calculate({
           totalPrincipalPaid += principalPaid;
 
           rows.push({
-            date: curDate,
+            dateStart: curDate, dateEnd: "",
             type: "还款",
             amount: repayAmount,
-            interestOffset: interestPaid > 0 ? interestPaid.toFixed(2) : "-",
-            principalOffset: principalPaid > 0 ? principalPaid.toFixed(2) : "-",
+            interestOffset: interestPaid > 0 ? interestPaid.toFixed(2) : "",
+            principalOffset: principalPaid > 0 ? principalPaid.toFixed(2) : "",
             principal,
-            lprBase: "-",
-            multiplierLabel: "-",
-            rate: "-",
-            days: "-",
-            interest: "-",
+            lprBase: "",
+            multiplierLabel: "",
+            rate: "",
+            days: "",
+            interest: "",
             interestBalance: accruedInterest.toFixed(2),
             note: ev.note || ev.mode,
             isEvent: true,
@@ -203,7 +203,7 @@ export function calculate({
         let annualRate, lprBase, multiplierLabel;
         if (rateType === "fixed") {
           annualRate = fixedRate;
-          lprBase = "-";
+          lprBase = "";
           multiplierLabel = "固定";
         } else {
           const r = getEffectiveRate(lastDate, lprData, multipliers, lprMode, lprTerm);
@@ -216,11 +216,11 @@ export function calculate({
         accruedInterest += interest;
         totalInterestAccrued += interest;
         rows.push({
-          date: `${lastDate} 至 ${endDate}`,
+          dateStart: lastDate, dateEnd: endDate,
           type: "计息",
-          amount: "-",
-          interestOffset: "-",
-          principalOffset: "-",
+          amount: "",
+          interestOffset: "",
+          principalOffset: "",
           principal,
           lprBase,
           multiplierLabel,

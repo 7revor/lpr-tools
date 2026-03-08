@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react';
 import { Button, InputNumber, Input, Select } from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, PlusOutlined, SortAscendingOutlined } from '@ant-design/icons';
 import SmartDatePicker from './SmartDatePicker';
 
 // 单行组件独立 memo，只有自身 entry 变化才重渲染
@@ -88,6 +88,10 @@ const EntryList = memo(function EntryList({ title, icon, entries, setEntries, ty
     );
   }, [setEntries]);
 
+  const sortByDate = useCallback(() => {
+    setEntries((prev) => [...prev].sort((a, b) => (a.date || '').localeCompare(b.date || '')));
+  }, [setEntries]);
+
   return (
     <div className="card">
       <div className="card-title">
@@ -111,15 +115,25 @@ const EntryList = memo(function EntryList({ title, icon, entries, setEntries, ty
         ))
       )}
 
-      <Button
-        type="primary"
-        size="small"
-        icon={<PlusOutlined />}
-        onClick={add}
-        style={{ marginTop: 8 }}
-      >
-        添加{type === 'loan' ? '借款' : '还款'}
-      </Button>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <Button
+          type="primary"
+          size="small"
+          icon={<PlusOutlined />}
+          onClick={add}
+        >
+          添加{type === 'loan' ? '借款' : '还款'}
+        </Button>
+        {entries.length > 1 && (
+          <Button
+            size="small"
+            icon={<SortAscendingOutlined />}
+            onClick={sortByDate}
+          >
+            日期排序
+          </Button>
+        )}
+      </div>
     </div>
   );
 });

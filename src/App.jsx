@@ -41,6 +41,7 @@ function LprCalc() {
   const [dayBase, setDayBase] = useState(() => loadFromStorage()?.dayBase || 365);
   const [endDate, setEndDate] = useState(() => loadFromStorage()?.endDate || today());
   const [lprMode, setLprMode] = useState(() => loadFromStorage()?.lprMode || 'multiplier');
+  const [lprTerm, setLprTerm] = useState(() => loadFromStorage()?.lprTerm || '1y');
   const [lprData, setLprData] = useState(() => loadFromStorage()?.lprData || JSON.parse(JSON.stringify(DEFAULT_LPR)));
   const [loans, setLoans] = useState(() => loadFromStorage()?.loans || [{ date: today(), amount: 0, note: '' }]);
   const [repays, setRepays] = useState(() => loadFromStorage()?.repays || [{ date: today(), amount: 0, note: '', mode: '先息后本' }]);
@@ -51,13 +52,13 @@ function LprCalc() {
 
   const collectState = () => ({
     version: 1,
-    rateType, fixedRate, dayBase, endDate, lprMode,
+    rateType, fixedRate, dayBase, endDate, lprMode, lprTerm,
     lprData, loans, repays, multipliers,
   });
 
   const handleCalculate = () => {
     try {
-      const res = calculate({ rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, loans, repays });
+      const res = calculate({ rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, lprTerm, loans, repays });
       setResult(res);
       // 计算完成后自动暂存
       saveToStorage(collectState());
@@ -169,6 +170,7 @@ function LprCalc() {
           lprData={lprData} setLprData={setLprData}
           multipliers={multipliers} setMultipliers={setMultipliers}
           lprMode={lprMode} setLprMode={setLprMode}
+          lprTerm={lprTerm} setLprTerm={setLprTerm}
           showToast={showToast}
         />
       )}

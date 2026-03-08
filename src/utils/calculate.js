@@ -7,11 +7,11 @@ function daysBetween(d1, d2) {
   return Math.round((d2 - d1) / 86400000);
 }
 
-function getEffectiveRate(dateStr, lprData, multipliers, lprMode) {
+function getEffectiveRate(dateStr, lprData, multipliers, lprMode, lprTerm = '1y') {
   const sorted = [...lprData].sort((a, b) => a.date.localeCompare(b.date));
   let lpr = 0;
   for (const r of sorted) {
-    if (r.date <= dateStr) lpr = r.lpr1y;
+    if (r.date <= dateStr) lpr = lprTerm === '5y' ? r.lpr5y : r.lpr1y;
   }
 
   const sortedM = [...multipliers].sort((a, b) =>
@@ -33,7 +33,7 @@ function makeEventRow(date, type, amount, principal, note) {
   return { date, type, amount, principal, lprBase: '-', multiplierLabel: '-', rate: '-', days: '-', interest: '-', note, isEvent: true };
 }
 
-export function calculate({ rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, loans, repays }) {
+export function calculate({ rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, lprTerm = '1y', loans, repays }) {
   if (!endDate) throw new Error('请设置计息截止日期');
 
   const validLoans = loans.filter((l) => l.date && l.amount > 0);
@@ -89,7 +89,7 @@ export function calculate({ rateType, fixedRate, dayBase, endDate, lprData, mult
       lprBase = '-';
       multiplierLabel = '固定';
     } else {
-      const r = getEffectiveRate(curDate, lprData, multipliers, lprMode);
+      const r = getEffectiveRate(curDate, lprData, multipliers, lprMode, lprTerm);
       annualRate = r.finalRate;
       lprBase = r.lpr.toFixed(2);
       multiplierLabel = r.multiplierLabel;
@@ -190,7 +190,7 @@ export function calculate({ rateType, fixedRate, dayBase, endDate, lprData, mult
           lprBase = '-';
           multiplierLabel = '固定';
         } else {
-          const r = getEffectiveRate(lastDate, lprData, multipliers, lprMode);
+          const r = getEffectiveRate(lastDate, lprData, multipliers, lprMode, lprTerm);
           annualRate = r.finalRate;
           lprBase = r.lpr.toFixed(2);
           multiplierLabel = r.multiplierLabel;

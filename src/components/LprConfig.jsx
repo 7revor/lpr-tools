@@ -77,7 +77,7 @@ const EditableDateCell = memo(function EditableDateCell({ initialValue, rowIdx, 
 });
 
 const LprConfig = memo(function LprConfig({
-  lprData, setLprData, multipliers, setMultipliers, lprMode, setLprMode, showToast,
+  lprData, setLprData, multipliers, setMultipliers, lprMode, setLprMode, lprTerm, setLprTerm, showToast,
 }) {
   const fileRef = useRef(null);
   const [showPaste, setShowPaste] = useState(false);
@@ -266,6 +266,14 @@ const LprConfig = memo(function LprConfig({
       <p className="hint-text">
         设置不同时间段内 LPR 的倍率或加点值。例如倍率 1.5 表示按 LPR×1.5 计息；加点 50 表示 LPR+0.5%。
       </p>
+
+      <div style={{ marginBottom: 10 }}>
+        <span style={{ marginRight: 8, fontSize: 13, color: 'var(--text-secondary)' }}>LPR 期限：</span>
+        <Radio.Group value={lprTerm} onChange={(e) => setLprTerm(e.target.value)}>
+          <Radio value="1y">1 年期 LPR</Radio>
+          <Radio value="5y">5 年期 LPR</Radio>
+        </Radio.Group>
+      </div>
 
       <Radio.Group value={lprMode} onChange={(e) => setLprMode(e.target.value)} style={{ marginBottom: 12 }}>
         <Radio value="multiplier">倍率模式</Radio>

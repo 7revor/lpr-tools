@@ -45,6 +45,7 @@ export function calculate({
   multipliers,
   lprMode,
   lprTerm = "1y",
+  mergeLpr = false,
   loans,
   repays,
 }) {
@@ -69,7 +70,19 @@ export function calculate({
   events.forEach((e) => breakpoints.add(e.date));
 
   if (rateType === "lpr") {
-    lprData.forEach((r) => breakpoints.add(r.date));
+    if (mergeLpr) {
+      // 仅在所选期限的 LPR 值相对上一期发生变化时才设分段点，
+      // 从而把利率相同的连续月份合并为一段（事件、倍率/加点变化仍单独分段）
+      const sortedLpr = [...lprData].sort((a, b) => a.date.localeCompare(b.date));
+      let prevVal = null;
+      sortedLpr.forEach((r) => {
+        const val = lprTerm === "5y" ? r.lpr5y : r.lpr1y;
+        if (prevVal === null || val !== prevVal) breakpoints.add(r.date);
+        prevVal = val;
+      });
+    } else {
+      lprData.forEach((r) => breakpoints.add(r.date));
+    }
     multipliers.forEach((m) => {
       if (m.startDate) breakpoints.add(m.startDate);
     });

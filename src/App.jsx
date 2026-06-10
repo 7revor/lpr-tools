@@ -42,6 +42,7 @@ function LprCalc() {
   const [endDate, setEndDate] = useState(() => loadFromStorage()?.endDate || today());
   const [lprMode, setLprMode] = useState(() => loadFromStorage()?.lprMode || 'multiplier');
   const [lprTerm, setLprTerm] = useState(() => loadFromStorage()?.lprTerm || '1y');
+  const [mergeLpr, setMergeLpr] = useState(() => loadFromStorage()?.mergeLpr ?? true);
   const [lprData, setLprData] = useState(() => loadFromStorage()?.lprData || JSON.parse(JSON.stringify(DEFAULT_LPR)));
   const [loans, setLoans] = useState(() => loadFromStorage()?.loans || [{ date: today(), amount: 0, note: '' }]);
   const [repays, setRepays] = useState(() => loadFromStorage()?.repays || [{ date: today(), amount: 0, note: '', mode: '先息后本' }]);
@@ -52,13 +53,13 @@ function LprCalc() {
 
   const collectState = () => ({
     version: 1,
-    rateType, fixedRate, dayBase, endDate, lprMode, lprTerm,
+    rateType, fixedRate, dayBase, endDate, lprMode, lprTerm, mergeLpr,
     lprData, loans, repays, multipliers,
   });
 
   const handleCalculate = () => {
     try {
-      const res = calculate({ rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, lprTerm, loans, repays });
+      const res = calculate({ rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, lprTerm, mergeLpr, loans, repays });
       setResult(res);
       // 计算完成后自动暂存
       saveToStorage(collectState());
@@ -94,6 +95,8 @@ function LprCalc() {
         if (data.dayBase) setDayBase(data.dayBase);
         if (data.endDate) setEndDate(data.endDate);
         if (data.lprMode) setLprMode(data.lprMode);
+        if (data.lprTerm) setLprTerm(data.lprTerm);
+        if (data.mergeLpr !== undefined) setMergeLpr(data.mergeLpr);
         if (data.lprData) setLprData(data.lprData);
         if (data.loans) setLoans(data.loans);
         if (data.repays) setRepays(data.repays);
@@ -121,6 +124,8 @@ function LprCalc() {
         setDayBase(365);
         setEndDate(today());
         setLprMode('multiplier');
+        setLprTerm('1y');
+        setMergeLpr(true);
         setLprData(JSON.parse(JSON.stringify(DEFAULT_LPR)));
         setLoans([]);
         setRepays([]);
@@ -163,6 +168,7 @@ function LprCalc() {
         fixedRate={fixedRate} setFixedRate={setFixedRate}
         dayBase={dayBase} setDayBase={setDayBase}
         endDate={endDate} setEndDate={setEndDate}
+        mergeLpr={mergeLpr} setMergeLpr={setMergeLpr}
       />
 
       {rateType === 'lpr' && (

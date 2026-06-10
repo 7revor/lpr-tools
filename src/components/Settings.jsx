@@ -1,8 +1,8 @@
 import { memo } from 'react';
-import { Select, InputNumber } from 'antd';
+import { Select, InputNumber, Switch } from 'antd';
 import SmartDatePicker from './SmartDatePicker';
 
-const Settings = memo(function Settings({ rateType, setRateType, fixedRate, setFixedRate, dayBase, setDayBase, endDate, setEndDate }) {
+const Settings = memo(function Settings({ rateType, setRateType, fixedRate, setFixedRate, dayBase, setDayBase, endDate, setEndDate, mergeLpr, setMergeLpr }) {
   return (
     <div className="card">
       <div className="card-title">
@@ -21,6 +21,18 @@ const Settings = memo(function Settings({ rateType, setRateType, fixedRate, setF
             ]}
           />
         </div>
+
+        {rateType === 'lpr' && (
+          <div className="form-group">
+            <label>相同LPR合并计息</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 32 }}>
+              <Switch checked={mergeLpr} onChange={setMergeLpr} />
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                {mergeLpr ? '相邻相同LPR合并为一段' : '每月LPR各自成段'}
+              </span>
+            </div>
+          </div>
+        )}
 
         {rateType === 'fixed' && (
           <div className="form-group">

@@ -1,0 +1,153 @@
+import { describe, it, expect } from 'vitest';
+import { calculate } from './calculate';
+import { DEFAULT_LPR } from '../data/lpr';
+
+const base = {
+  rateType: 'lpr',
+  fixedRate: 4.35,
+  dayBase: 365,
+  lprData: DEFAULT_LPR,
+  multipliers: [{ startDate: '', value: 1 }],
+  lprMode: 'multiplier',
+  lprTerm: '1y',
+  mergeLpr: true,
+  repays: [],
+};
+
+const periods = (res) => res.rows.filter((r) => !r.isEvent);
+const repayRows = (res) => res.rows.filter((r) => r.type === '还款');
+
+// 手工计算：Σ 本金 × 年利率 / 基数 × 天数
+function manual(principal, segs, dayBase = 365) {
+  return segs.reduce((s, [a, b, rate]) => s + principal * rate / 100 / dayBase * ((new Date(b) - new Date(a)) / 86400000), 0);
+}
+
+describe('calculate 基础校验', () => {
+  it('缺少截止日期时报错', () => {
+    expect(() => calculate({ ...base, endDate: '', loans: [{ date: '2024-01-01', amount: 1 }] })).toThrow('截止日期');
+  });
+
+  it('没有有效借款时报错', () => {
+    expect(() => calculate({ ...base, endDate: '2024-12-31', loans: [{ date: '2024-01-01', amount: 0 }] })).toThrow('至少输入一笔借款');
+  });
+});
+
+describe('LPR 浮动计息', () => {
+  const args = { ...base, endDate: '2024-12-31', loans: [{ date: '2024-01-01', amount: 10000 }] };
+
+  it('跨 LPR 调整分段计息，结果与手算一致', () => {
+    const res = calculate(args);
+    const expected = manual(10000, [
+      ['2024-01-01', '2024-07-22', 3.45],
+      ['2024-07-22', '2024-10-21', 3.35],
+      ['2024-10-21', '2024-12-31', 3.10],
+    ]);
+    expect(res.totalInterest).toBeCloseTo(expected, 2);
+    expect(periods(res).map((r) => [r.dateStart, r.dateEnd, r.lprBase])).toEqual([
+      ['2024-01-01', '2024-07-22', '3.45'],
+      ['2024-07-22', '2024-10-21', '3.35'],
+      ['2024-10-21', '2024-12-31', '3.10'],
+    ]);
+  });
+
+  it('合并与不合并 LPR 分段的利息合计相同', () => {
+    const merged = calculate(args);
+    const split = calculate({ ...args, mergeLpr: false });
+    expect(periods(split).length).toBeGreaterThan(periods(merged).length);
+    expect(split.totalInterest).toBeCloseTo(merged.totalInterest, 2);
+  });
+
+  it('5 年期 LPR', () => {
+    const res = calculate({ ...args, lprTerm: '5y' });
+    const expected = manual(10000, [
+      ['2024-01-01', '2024-02-20', 4.2],
+      ['2024-02-20', '2024-07-22', 3.95],
+      ['2024-07-22', '2024-10-21', 3.85],
+      ['2024-10-21', '2024-12-31', 3.6],
+    ]);
+    expect(res.totalInterest).toBeCloseTo(expected, 2);
+  });
+
+  it('倍率分段：起始日期切分并按段内倍率计息', () => {
+    const res = calculate({
+      ...args,
+      multipliers: [{ startDate: '', value: 1 }, { startDate: '2024-04-01', value: 1.5 }],
+    });
+    const expected = manual(10000, [['2024-01-01', '2024-04-01', 3.45]])
+      + manual(10000, [
+        ['2024-04-01', '2024-07-22', 3.45 * 1.5],
+        ['2024-07-22', '2024-10-21', 3.35 * 1.5],
+        ['2024-10-21', '2024-12-31', 3.10 * 1.5],
+      ]);
+    expect(res.totalInterest).toBeCloseTo(expected, 2);
+    expect(periods(res)[1].multiplierLabel).toBe('×1.5');
+  });
+
+  it('加点模式：LPR + BP/100', () => {
+    const res = calculate({ ...args, lprMode: 'basis', multipliers: [{ startDate: '', value: 50 }] });
+    const expected = manual(10000, [
+      ['2024-01-01', '2024-07-22', 3.95],
+      ['2024-07-22', '2024-10-21', 3.85],
+      ['2024-10-21', '2024-12-31', 3.60],
+    ]);
+    expect(res.totalInterest).toBeCloseTo(expected, 2);
+    expect(periods(res)[0].multiplierLabel).toBe('+50BP');
+  });
+});
+
+describe('固定利率', () => {
+  it('按固定年利率与 360 天基数计息', () => {
+    const res = calculate({
+      ...base, rateType: 'fixed', fixedRate: 3.6, dayBase: 360,
+      endDate: '2024-12-31', loans: [{ date: '2024-01-01', amount: 10000 }],
+    });
+    expect(periods(res)).toHaveLength(1);
+    expect(res.totalInterest).toBeCloseTo(10000 * 0.036 / 360 * 365, 2);
+  });
+});
+
+describe('还款冲抵', () => {
+  const fixed = { ...base, rateType: 'fixed', fixedRate: 3.65, endDate: '2024-12-31', loans: [{ date: '2024-01-01', amount: 10000 }] };
+  // 2024-01-01 至 2024-03-01 共 60 天，利息 = 10000 × 3.65% / 365 × 60 = 60
+
+  it('先息后本：先冲利息再还本金', () => {
+    const res = calculate({ ...fixed, repays: [{ date: '2024-03-01', amount: 1060, mode: '先息后本' }] });
+    const row = repayRows(res)[0];
+    expect(row.interestOffset).toBe('60.00');
+    expect(row.principalOffset).toBe('1000.00');
+    expect(row.principal).toBe(9000);
+    expect(row.interestBalance).toBe('0.00');
+  });
+
+  it('先本后息：先还本金再冲利息', () => {
+    const res = calculate({ ...fixed, repays: [{ date: '2024-03-01', amount: 1060, mode: '先本后息' }] });
+    const row = repayRows(res)[0];
+    expect(row.principalOffset).toBe('1060.00');
+    expect(row.interestOffset).toBe('');
+    expect(row.interestBalance).toBe('60.00');
+  });
+
+  it('还款日之后按新本金计息', () => {
+    const res = calculate({ ...fixed, repays: [{ date: '2024-03-01', amount: 5060, mode: '先息后本' }] });
+    expect(res.totalInterest).toBeCloseTo(60 + 5000 * 0.0365 / 365 * 305, 2);
+    expect(res.remainPrincipal).toBe(5000);
+  });
+
+  it('同日先借款后还款', () => {
+    const res = calculate({
+      ...fixed,
+      loans: [{ date: '2024-01-01', amount: 10000 }, { date: '2024-03-01', amount: 2000 }],
+      repays: [{ date: '2024-03-01', amount: 1060, mode: '先息后本' }],
+    });
+    const types = res.rows.filter((r) => r.dateStart === '2024-03-01' && r.isEvent).map((r) => r.type);
+    expect(types).toEqual(['借款', '还款']);
+    expect(repayRows(res)[0].principal).toBe(11000);
+  });
+
+  it('全部还清后停止计息', () => {
+    const res = calculate({ ...fixed, repays: [{ date: '2024-03-01', amount: 10060, mode: '先息后本' }] });
+    expect(res.remainPrincipal).toBe(0);
+    expect(res.remainInterest).toBe(0);
+    expect(periods(res)).toHaveLength(1);
+  });
+});

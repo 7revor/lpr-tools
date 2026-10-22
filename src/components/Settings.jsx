@@ -155,9 +155,14 @@ const Settings = memo(function Settings({
               <DatabaseOutlined />
               <span>
                 LPR 数据 {lprData.length} 条
-                {latestLpr && <>，最新 <b>{latestLpr.date}</b>（{latestLpr.lpr1y.toFixed(2)}% / {latestLpr.lpr5y.toFixed(2)}%）</>}
+                {latestLpr && (
+                  <>
+                    ，最新 <b>{latestLpr.date}</b>
+                    <span className="lpr-source-rates">（{latestLpr.lpr1y.toFixed(2)}% / {latestLpr.lpr5y.toFixed(2)}%）</span>
+                  </>
+                )}
               </span>
-              {lprStale && <Tag color="warning" bordered={false}>可能需要更新</Tag>}
+              {lprStale && <Tag color="warning" variant="filled">可能需要更新</Tag>}
               <RightOutlined className="lpr-source-arrow" />
             </button>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { ConfigProvider, App as AntdApp, Button, Dropdown } from 'antd';
 import { ExportOutlined, ImportOutlined, DeleteOutlined, GithubOutlined, MoreOutlined, CalculatorOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
@@ -8,6 +8,7 @@ import { today } from './utils/date';
 import Settings from './components/Settings';
 import EntryList from './components/EntryList';
 import ResultTable from './components/ResultTable';
+import SummaryBar from './components/SummaryBar';
 import './App.css';
 
 const STORAGE_KEY = 'lpr-calc-state';
@@ -53,7 +54,6 @@ function LprCalc() {
   const [loans, setLoans] = useState(() => loadFromStorage()?.loans || [emptyLoan()]);
   const [repays, setRepays] = useState(() => loadFromStorage()?.repays || [emptyRepay()]);
   const [multipliers, setMultipliers] = useState(() => loadFromStorage()?.multipliers || [{ startDate: '', value: 1.0 }]);
-  const [result, setResult] = useState(null);
 
   const importRef = useRef(null);
 
@@ -75,18 +75,17 @@ function LprCalc() {
     return () => clearTimeout(timer);
   }, [rateType, fixedRate, dayBase, endDate, lprMode, lprTerm, mergeLpr, lprData, loans, repays, multipliers]);
 
-  const handleCalculate = () => {
+  // 输入变化即重新计算（纯前端、毫秒级），结果不会与当前输入脱节；
+  // 无法计算时把原因展示在结果区，而不是弹一次性提示
+  const calc = useMemo(() => {
+    if (!loans.some((l) => l.date && l.amount > 0)) return { status: 'empty' };
     try {
-      const res = calculate({ rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, lprTerm, mergeLpr, loans, repays });
-      setResult(res);
-      res.warnings.forEach((w) => message.warning(w));
-      setTimeout(() => {
-        document.getElementById('result-section')?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      const result = calculate({ rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, lprTerm, mergeLpr, loans, repays });
+      return { status: 'ok', result };
     } catch (err) {
-      message.error(err.message);
+      return { status: 'error', message: err.message };
     }
-  };
+  }, [rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, lprTerm, mergeLpr, loans, repays]);
 
   const handleExport = () => {
     const data = collectState();
@@ -118,7 +117,6 @@ function LprCalc() {
         if (data.loans) setLoans(data.loans);
         if (data.repays) setRepays(data.repays);
         if (data.multipliers) setMultipliers(data.multipliers);
-        setResult(null);
         showToast('数据导入成功');
       } catch (err) {
         showToast('导入失败: ' + err.message, 'error');
@@ -148,7 +146,6 @@ function LprCalc() {
         setLoans([emptyLoan()]);
         setRepays([emptyRepay()]);
         setMultipliers([{ startDate: '', value: 1.0 }]);
-        setResult(null);
         localStorage.removeItem(STORAGE_KEY);
         showToast('已清空所有数据');
       },
@@ -214,16 +211,10 @@ function LprCalc() {
         <EntryList type="loan" entries={loans} setEntries={setLoans} />
         <EntryList type="repay" entries={repays} setEntries={setRepays} />
 
-        <div className="calc-action">
-          <Button type="primary" size="large" icon={<CalculatorOutlined />} onClick={handleCalculate}>
-            开始计算
-          </Button>
-        </div>
-
-        <div id="result-section">
-          {result && <ResultTable result={result} showToast={showToast} />}
-        </div>
+        <ResultTable calc={calc} endDate={endDate} showToast={showToast} />
       </main>
+
+      <SummaryBar calc={calc} targetId="result-section" />
     </>
   );
 }

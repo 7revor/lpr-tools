@@ -37,7 +37,7 @@ const MultiplierEditor = memo(function MultiplierEditor({ multipliers, setMultip
             value={m.startDate}
             onChange={(dateStr) => updateMultiplier(i, 'startDate', dateStr)}
             style={{ width: '100%' }}
-            placeholder={i === 0 ? '留空 = 从最早开始' : '选择起始日期'}
+            placeholder={i === 0 ? '留空 = 最早' : '起始日期'}
             aria-label={`第 ${i + 1} 段起始日期`}
           />
           <InputNumber

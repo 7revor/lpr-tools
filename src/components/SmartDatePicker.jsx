@@ -1,7 +1,7 @@
 import { memo, useCallback, useRef } from 'react';
 import { DatePicker, App as AntdApp } from 'antd';
 import dayjs from 'dayjs';
-import { DATE_FORMATS, normalizeRawInput, tryParseDate } from '../utils/date';
+import { DATE_FORMATS, normalizeRawInput, tryParseDate, today } from '../utils/date';
 
 /**
  * SmartDatePicker
@@ -59,9 +59,9 @@ const SmartDatePicker = memo(function SmartDatePicker({
     const parsed = tryParseDate(raw);
     if (!parsed) {
       // 完全无法解析 → 回填今日并提示
-      const today = dayjs().format('YYYY-MM-DD');
-      latestValueRef.current = today;
-      onChange(today);
+      const todayStr = today();
+      latestValueRef.current = todayStr;
+      onChange(todayStr);
       message.warning(`"${raw}" 无法识别为有效日期，已自动填入今日`);
     } else {
       // 解析成功：如果 antd 内部已经回滚（未触发 onChange），主动提交正确值

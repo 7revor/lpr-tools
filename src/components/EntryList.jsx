@@ -2,6 +2,7 @@ import { memo, useCallback } from 'react';
 import { Button, InputNumber, Input, Select } from 'antd';
 import { DeleteOutlined, PlusOutlined, SortAscendingOutlined } from '@ant-design/icons';
 import SmartDatePicker from './SmartDatePicker';
+import { today } from '../utils/date';
 
 // 单行组件独立 memo，只有自身 entry 变化才重渲染
 const EntryRow = memo(function EntryRow({ entry, index, type, onUpdate, onRemove }) {
@@ -67,9 +68,8 @@ const EntryRow = memo(function EntryRow({ entry, index, type, onUpdate, onRemove
 const EntryList = memo(function EntryList({ title, icon, entries, setEntries, type }) {
   // useCallback + 函数式更新：setEntries 本身引用稳定，deps 为空或 [type]
   const add = useCallback(() => {
-    const today = new Date().toISOString().slice(0, 10);
     setEntries((prev) => {
-      const entry = { date: today, amount: 0, note: '' };
+      const entry = { date: today(), amount: 0, note: '' };
       if (type === 'repay') entry.mode = '先息后本';
       return [...prev, entry];
     });

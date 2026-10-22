@@ -4,6 +4,7 @@ import SmartDatePicker from './SmartDatePicker';
 import { PlusOutlined, ReloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { DEFAULT_LPR } from '../data/lpr';
 import { parseLprText } from '../utils/lprText';
+import { today } from '../utils/date';
 
 // LPR 表格数字单元格：本地 state，仅 blur 时提交父级，避免每次击键都触发整表重渲染
 const EditableNumberCell = memo(function EditableNumberCell({ initialValue, rowIdx, field, onCommit }) {
@@ -85,8 +86,7 @@ const LprConfig = memo(function LprConfig({
   }, [setLprData]);
 
   const addLpr = useCallback(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    setLprData((prev) => [...prev, { date: today, lpr1y: 3.10, lpr5y: 3.60 }]);
+    setLprData((prev) => [...prev, { date: today(), lpr1y: 3.10, lpr5y: 3.60 }]);
   }, [setLprData]);
 
   const handlePasteImport = useCallback(() => {

@@ -44,6 +44,11 @@ export function tryParseDate(str) {
   return null;
 }
 
+// 本地时区的今日日期；不能用 toISOString（UTC），北京时间 0–8 点会得到前一天
+export function today() {
+  return dayjs().format('YYYY-MM-DD');
+}
+
 // 任意支持格式 → 'YYYY-MM-DD'，无法识别返回 null
 export function normalizeDate(str) {
   return tryParseDate(str)?.format('YYYY-MM-DD') ?? null;

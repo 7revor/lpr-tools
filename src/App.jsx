@@ -4,6 +4,7 @@ import { ExportOutlined, ImportOutlined, DeleteOutlined, GithubOutlined } from '
 import zhCN from 'antd/locale/zh_CN';
 import { DEFAULT_LPR } from './data/lpr';
 import { calculate } from './utils/calculate';
+import { today } from './utils/date';
 import Settings from './components/Settings';
 import LprConfig from './components/LprConfig';
 import EntryList from './components/EntryList';
@@ -11,7 +12,6 @@ import ResultTable from './components/ResultTable';
 import './App.css';
 
 const STORAGE_KEY = 'lpr-calc-state';
-const today = () => new Date().toISOString().slice(0, 10);
 
 function loadFromStorage() {
   try {

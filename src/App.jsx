@@ -1,17 +1,19 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { ConfigProvider, App as AntdApp, Button, Space } from 'antd';
-import { ExportOutlined, ImportOutlined, DeleteOutlined, GithubOutlined } from '@ant-design/icons';
+import { ConfigProvider, App as AntdApp, Button, Dropdown } from 'antd';
+import { ExportOutlined, ImportOutlined, DeleteOutlined, GithubOutlined, MoreOutlined, CalculatorOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
 import { DEFAULT_LPR } from './data/lpr';
 import { calculate } from './utils/calculate';
 import { today } from './utils/date';
 import Settings from './components/Settings';
-import LprConfig from './components/LprConfig';
 import EntryList from './components/EntryList';
 import ResultTable from './components/ResultTable';
 import './App.css';
 
 const STORAGE_KEY = 'lpr-calc-state';
+const GITHUB_URL = 'https://github.com/7revor/lpr-tools';
+const emptyLoan = () => ({ date: today(), amount: 0, note: '' });
+const emptyRepay = () => ({ date: today(), amount: 0, note: '', mode: '先息后本' });
 
 function loadFromStorage() {
   try {
@@ -48,8 +50,8 @@ function LprCalc() {
   const [lprTerm, setLprTerm] = useState(() => loadFromStorage()?.lprTerm || '1y');
   const [mergeLpr, setMergeLpr] = useState(() => loadFromStorage()?.mergeLpr ?? true);
   const [lprData, setLprData] = useState(() => loadFromStorage()?.lprData || JSON.parse(JSON.stringify(DEFAULT_LPR)));
-  const [loans, setLoans] = useState(() => loadFromStorage()?.loans || [{ date: today(), amount: 0, note: '' }]);
-  const [repays, setRepays] = useState(() => loadFromStorage()?.repays || [{ date: today(), amount: 0, note: '', mode: '先息后本' }]);
+  const [loans, setLoans] = useState(() => loadFromStorage()?.loans || [emptyLoan()]);
+  const [repays, setRepays] = useState(() => loadFromStorage()?.repays || [emptyRepay()]);
   const [multipliers, setMultipliers] = useState(() => loadFromStorage()?.multipliers || [{ startDate: '', value: 1.0 }]);
   const [result, setResult] = useState(null);
 
@@ -129,7 +131,7 @@ function LprCalc() {
   const handleClear = () => {
     modal.confirm({
       title: '确认清空',
-      content: '确定清空所有已输入的数据？',
+      content: '借还款记录、计息设置和 LPR 数据都会恢复为初始状态，此操作无法撤销。建议先导出备份。',
       okType: 'danger',
       okText: '清空',
       cancelText: '取消',
@@ -142,8 +144,9 @@ function LprCalc() {
         setLprTerm('1y');
         setMergeLpr(true);
         setLprData(JSON.parse(JSON.stringify(DEFAULT_LPR)));
-        setLoans([]);
-        setRepays([]);
+        // 与首次打开保持一致：各留一行空白录入
+        setLoans([emptyLoan()]);
+        setRepays([emptyRepay()]);
         setMultipliers([{ startDate: '', value: 1.0 }]);
         setResult(null);
         localStorage.removeItem(STORAGE_KEY);
@@ -152,68 +155,76 @@ function LprCalc() {
     });
   };
 
+  const dataMenu = {
+    items: [
+      { key: 'export', icon: <ExportOutlined />, label: '导出数据（JSON）' },
+      { key: 'import', icon: <ImportOutlined />, label: '导入数据（JSON）' },
+      { type: 'divider' },
+      { key: 'clear', icon: <DeleteOutlined />, label: '清空所有数据', danger: true },
+    ],
+    onClick: ({ key }) => {
+      if (key === 'export') handleExport();
+      else if (key === 'import') importRef.current?.click();
+      else if (key === 'clear') handleClear();
+    },
+  };
+
   return (
-    <div className="container">
-      <header>
-        <h1>LPR 借贷利息计算系统</h1>
-        <p>支持多笔借款/还款、LPR分段倍率与固定利率、结果一键复制到Excel</p>
-        <a
-          className="github-link"
-          href="https://github.com/7revor/lpr-tools"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="在 GitHub 上查看源码"
-        >
-          <GithubOutlined />
-          <span>GitHub</span>
-        </a>
+    <>
+      <header className="topbar">
+        <div className="topbar-inner">
+          <div className="brand">
+            <span className="brand-mark" aria-hidden="true"><CalculatorOutlined /></span>
+            <div className="brand-text">
+              <h1>LPR 借贷利息计算</h1>
+              <p>多笔借还款 · LPR 分段倍率/加点 · 结果可直接粘贴到 Excel</p>
+            </div>
+          </div>
+          <div className="topbar-actions">
+            <Button
+              type="text"
+              icon={<GithubOutlined />}
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="在 GitHub 上查看源码"
+            />
+            <Dropdown menu={dataMenu} trigger={['click']} placement="bottomRight">
+              <Button icon={<MoreOutlined />}>数据</Button>
+            </Dropdown>
+            <input ref={importRef} type="file" accept=".json" hidden onChange={handleImport} />
+          </div>
+        </div>
       </header>
 
-      <div className="toolbar">
-        <Space wrap>
-          <Button icon={<ExportOutlined />} onClick={handleExport}>导出数据 (JSON)</Button>
-          <Button icon={<ImportOutlined />} onClick={() => importRef.current?.click()}>导入数据 (JSON)</Button>
-          <input ref={importRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
-          <Button danger icon={<DeleteOutlined />} onClick={handleClear}>清空所有</Button>
-        </Space>
-      </div>
-
-      <Settings
-        rateType={rateType} setRateType={setRateType}
-        fixedRate={fixedRate} setFixedRate={setFixedRate}
-        dayBase={dayBase} setDayBase={setDayBase}
-        endDate={endDate} setEndDate={setEndDate}
-        mergeLpr={mergeLpr} setMergeLpr={setMergeLpr}
-      />
-
-      {rateType === 'lpr' && (
-        <LprConfig
-          lprData={lprData} setLprData={setLprData}
-          multipliers={multipliers} setMultipliers={setMultipliers}
+      <main className="container">
+        <Settings
+          rateType={rateType} setRateType={setRateType}
+          fixedRate={fixedRate} setFixedRate={setFixedRate}
+          dayBase={dayBase} setDayBase={setDayBase}
+          endDate={endDate} setEndDate={setEndDate}
+          mergeLpr={mergeLpr} setMergeLpr={setMergeLpr}
           lprMode={lprMode} setLprMode={setLprMode}
           lprTerm={lprTerm} setLprTerm={setLprTerm}
+          multipliers={multipliers} setMultipliers={setMultipliers}
+          lprData={lprData} setLprData={setLprData}
           showToast={showToast}
         />
-      )}
 
-      <EntryList title="借款录入" icon="💰" type="loan" entries={loans} setEntries={setLoans} />
-      <EntryList title="还款录入" icon="💸" type="repay" entries={repays} setEntries={setRepays} />
+        <EntryList title="借款录入" icon="💰" type="loan" entries={loans} setEntries={setLoans} />
+        <EntryList title="还款录入" icon="💸" type="repay" entries={repays} setEntries={setRepays} />
 
-      <div className="calc-action">
-        <Button
-          type="primary"
-          size="large"
-          onClick={handleCalculate}
-          style={{ padding: '0 56px', height: 48, fontSize: 16, borderRadius: 12 }}
-        >
-          🧮 开始计算
-        </Button>
-      </div>
+        <div className="calc-action">
+          <Button type="primary" size="large" icon={<CalculatorOutlined />} onClick={handleCalculate}>
+            开始计算
+          </Button>
+        </div>
 
-      <div id="result-section">
-        {result && <ResultTable result={result} showToast={showToast} />}
-      </div>
-    </div>
+        <div id="result-section">
+          {result && <ResultTable result={result} showToast={showToast} />}
+        </div>
+      </main>
+    </>
   );
 }
 
@@ -224,8 +235,16 @@ export default function App() {
       theme={{
         token: {
           colorPrimary: '#4f6ef7',
-          borderRadius: 6,
+          colorText: '#1f2633',
+          colorTextSecondary: '#5b6577',
+          colorBorder: '#d9dee8',
+          colorBorderSecondary: '#e8ebf1',
+          borderRadius: 8,
           fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
+        },
+        components: {
+          Segmented: { itemSelectedColor: '#4f6ef7' },
+          Table: { headerBg: '#f6f7fa', headerColor: '#5b6577', cellFontSizeSM: 13 },
         },
       }}
     >

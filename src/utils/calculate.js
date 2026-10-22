@@ -19,7 +19,16 @@ function createRateResolver({ rateType, fixedRate, lprData, multipliers, lprMode
 
   return (dateStr) => {
     const r = sortedLpr.findLast((x) => x.date <= dateStr);
-    const lpr = r ? (lprTerm === "5y" ? r.lpr5y : r.lpr1y) : 0;
+    // 早于首条 LPR 的区间没有可用利率，不能按 0 计息
+    if (!r) {
+      throw new Error(
+        sortedLpr.length === 0
+          ? "LPR 数据为空，请导入或恢复默认 LPR 数据"
+          : `计息区间起始日 ${dateStr} 早于 LPR 数据最早生效日 ${sortedLpr[0].date}，无法确定利率。` +
+            "该期间请改用固定利率（如贷款基准利率）或补充更早的利率数据",
+      );
+    }
+    const lpr = lprTerm === "5y" ? r.lpr5y : r.lpr1y;
     const m = sortedM.findLast((x) => !x.startDate || x.startDate <= dateStr);
     const mValue = m ? m.value : defaultM;
 

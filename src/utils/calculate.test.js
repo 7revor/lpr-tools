@@ -50,6 +50,24 @@ describe('LPR 浮动计息', () => {
     ]);
   });
 
+  it('计息区间早于首条 LPR 时报错而不是按 0 计息', () => {
+    expect(() => calculate({ ...args, endDate: '2019-12-31', loans: [{ date: '2019-01-01', amount: 10000 }] }))
+      .toThrow('早于 LPR 数据最早生效日 2019-08-20');
+  });
+
+  it('LPR 数据为空时报错', () => {
+    expect(() => calculate({ ...args, lprData: [] })).toThrow('LPR 数据为空');
+  });
+
+  it('早于首条 LPR 但当时本金为 0（尚未借款）不报错', () => {
+    const res = calculate({
+      ...args, endDate: '2019-12-31',
+      loans: [{ date: '2019-09-01', amount: 10000 }],
+      repays: [{ date: '2019-01-01', amount: 1, mode: '先息后本' }],
+    });
+    expect(periods(res)[0].lprBase).toBe('4.25');
+  });
+
   it('合并与不合并 LPR 分段的利息合计相同', () => {
     const merged = calculate(args);
     const split = calculate({ ...args, mergeLpr: false });

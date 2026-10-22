@@ -4,10 +4,6 @@ import { CopyOutlined } from '@ant-design/icons';
 import { copyTableAsText, copyToClipboard } from '../utils/clipboard';
 
 const ResultTable = memo(function ResultTable({ result, showToast }) {
-  if (!result) return null;
-
-  const { rows, totalLoan, totalRepay, totalInterest, totalInterestPaid, totalPrincipalPaid, totalOverpaid, remainPrincipal, remainInterest } = result;
-  console.log(rows);
   const handleCopyTab = useCallback(async () => {
     const text = copyTableAsText(result, '\t');
     await copyToClipboard(text);
@@ -19,6 +15,11 @@ const ResultTable = memo(function ResultTable({ result, showToast }) {
     await copyToClipboard(text);
     showToast('CSV格式已复制到剪贴板');
   }, [result, showToast]);
+
+  // Hooks 必须在提前返回之前无条件调用
+  if (!result) return null;
+
+  const { rows, totalLoan, totalRepay, totalInterest, totalInterestPaid, totalPrincipalPaid, totalOverpaid, remainPrincipal, remainInterest } = result;
 
   // 叶子列顺序（共 15 列）：
   // 0序号 1开始日期 2结束日期 3类型 4发生金额 5LPR 6倍率 7年利率 8天数

@@ -144,6 +144,17 @@ describe('还款冲抵', () => {
     expect(repayRows(res)[0].principal).toBe(11000);
   });
 
+  it('同日多笔还款保持录入顺序', () => {
+    const repays = ['A', 'B', 'C', 'D', 'E'].map((note, i) => ({
+      date: '2024-03-01', amount: 100, note, mode: i % 2 ? '先息后本' : '先本后息',
+    }));
+    // 录入顺序打乱借还款交错，排序后借款在前、还款仍按录入顺序
+    const loans = [{ date: '2024-01-01', amount: 10000 }, { date: '2024-03-01', amount: 500, note: 'L' }];
+    const res = calculate({ ...fixed, loans, repays });
+    const notes = res.rows.filter((r) => r.dateStart === '2024-03-01' && r.isEvent).map((r) => r.note);
+    expect(notes).toEqual(['L', 'A', 'B', 'C', 'D', 'E']);
+  });
+
   it('全部还清后停止计息', () => {
     const res = calculate({ ...fixed, repays: [{ date: '2024-03-01', amount: 10060, mode: '先息后本' }] });
     expect(res.remainPrincipal).toBe(0);

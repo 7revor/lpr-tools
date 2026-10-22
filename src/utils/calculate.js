@@ -93,7 +93,9 @@ export function calculate({
   validRepays.forEach((r) =>
     events.push({ date: r.date, amount: r.amount, type: "repay", note: r.note || "", mode: r.mode || "先息后本" }),
   );
-  events.sort((a, b) => a.date.localeCompare(b.date) || (a.type === "loan" ? -1 : 1));
+  // 同日先借款后还款；同类型保持录入顺序（比较器须对称，返回 0 才能依赖稳定排序）
+  const typeOrder = { loan: 0, repay: 1 };
+  events.sort((a, b) => a.date.localeCompare(b.date) || typeOrder[a.type] - typeOrder[b.type]);
 
   const allDates = collectBreakpoints({ rateType, endDate, events, lprData, multipliers, lprTerm, mergeLpr });
   const resolveRate = createRateResolver({ rateType, fixedRate, lprData, multipliers, lprMode, lprTerm });

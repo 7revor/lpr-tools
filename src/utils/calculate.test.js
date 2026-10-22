@@ -35,6 +35,26 @@ describe('calculate 基础校验', () => {
   });
 });
 
+describe('日期格式校验', () => {
+  const ok = { ...base, endDate: '2024-12-31', loans: [{ date: '2024-01-01', amount: 10000 }] };
+
+  it('LPR 日期不规范时报错而不是错误分段', () => {
+    const lprData = DEFAULT_LPR.map((d) => ({ ...d, date: d.date.replaceAll('-', '/') }));
+    expect(() => calculate({ ...ok, lprData })).toThrow('LPR 生效日期「2019/08/20」格式无效');
+  });
+
+  it('借还款、截止日、倍率日期不规范时报错', () => {
+    expect(() => calculate({ ...ok, endDate: '2024-2-30' })).toThrow('截止日期');
+    expect(() => calculate({ ...ok, loans: [{ date: '2024/1/1', amount: 1 }] })).toThrow('借款日期「2024/1/1」');
+    expect(() => calculate({ ...ok, repays: [{ date: '2024-02-30', amount: 1 }] })).toThrow('还款日期');
+    expect(() => calculate({ ...ok, multipliers: [{ startDate: '2024/3/1', value: 1 }] })).toThrow('倍率/加点起始日期');
+  });
+
+  it('固定利率模式不校验 LPR 数据', () => {
+    expect(() => calculate({ ...ok, rateType: 'fixed', lprData: [{ date: 'bad', lpr1y: 1, lpr5y: 1 }] })).not.toThrow();
+  });
+});
+
 describe('截止日之后的事件', () => {
   it('不参与计算并给出警告', () => {
     const res = calculate({

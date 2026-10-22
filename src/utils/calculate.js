@@ -1,3 +1,5 @@
+import { isIsoDate } from "./date";
+
 function parseDate(s) {
   const [y, m, d] = s.split("-").map(Number);
   return new Date(y, m - 1, d);
@@ -74,6 +76,21 @@ const fmt = (cents) => toYuan(cents).toFixed(2);
 // 四舍五入到整数分；先截到 6 位小数，消除 12.4999999999 这类浮点尾差对进位的影响
 const roundCents = (x) => Math.round(Number(x.toFixed(6)));
 
+// 日期按 YYYY-MM-DD 字符串比较大小，格式不规范（如 2024/7/22）会导致分段错乱，计算前统一校验
+function assertDates({ rateType, endDate, events, lprData, multipliers }) {
+  if (!isIsoDate(endDate)) throw new Error(`计息截止日期「${endDate}」格式无效，应为 YYYY-MM-DD`);
+  for (const e of events) {
+    if (!isIsoDate(e.date)) throw new Error(`${e.type === "loan" ? "借款" : "还款"}日期「${e.date}」格式无效，应为 YYYY-MM-DD`);
+  }
+  if (rateType !== "lpr") return;
+  for (const r of lprData) {
+    if (!isIsoDate(r.date)) throw new Error(`LPR 生效日期「${r.date}」格式无效，应为 YYYY-MM-DD`);
+  }
+  for (const m of multipliers) {
+    if (m.startDate && !isIsoDate(m.startDate)) throw new Error(`倍率/加点起始日期「${m.startDate}」格式无效，应为 YYYY-MM-DD`);
+  }
+}
+
 // 借款/事件行基础模板，金额参数均为分
 function makeEventRow(date, type, amountCents, principalCents, note, interestBalanceCents = 0) {
   return {
@@ -113,6 +130,7 @@ export function calculate({
   // 同日先借款后还款；同类型保持录入顺序（比较器须对称，返回 0 才能依赖稳定排序）
   const typeOrder = { loan: 0, repay: 1 };
   events.sort((a, b) => a.date.localeCompare(b.date) || typeOrder[a.type] - typeOrder[b.type]);
+  assertDates({ rateType, endDate, events, lprData, multipliers });
 
   const allDates = collectBreakpoints({ rateType, endDate, events, lprData, multipliers, lprTerm, mergeLpr });
   const resolveRate = createRateResolver({ rateType, fixedRate, lprData, multipliers, lprMode, lprTerm });

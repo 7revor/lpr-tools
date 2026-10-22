@@ -3,23 +3,7 @@ import { Button, InputNumber, Radio, Input, Table, Space } from 'antd';
 import SmartDatePicker from './SmartDatePicker';
 import { PlusOutlined, ReloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { DEFAULT_LPR } from '../data/lpr';
-
-function parseLprText(text) {
-  const lines = text.trim().split('\n').filter((l) => l.trim());
-  const data = [];
-  for (const line of lines) {
-    const parts = line.split(/[\t,;]+/).map((s) => s.trim());
-    if (parts.length >= 3) {
-      const date = parts[0];
-      const lpr1y = parseFloat(parts[1].replace('%', ''));
-      const lpr5y = parseFloat(parts[2].replace('%', ''));
-      if (date && !isNaN(lpr1y) && !isNaN(lpr5y)) {
-        data.push({ date, lpr1y, lpr5y });
-      }
-    }
-  }
-  return data;
-}
+import { parseLprText } from '../utils/lprText';
 
 // LPR 表格数字单元格：本地 state，仅 blur 时提交父级，避免每次击键都触发整表重渲染
 const EditableNumberCell = memo(function EditableNumberCell({ initialValue, rowIdx, field, onCommit }) {

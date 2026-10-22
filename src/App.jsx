@@ -211,8 +211,8 @@ function LprCalc() {
           showToast={showToast}
         />
 
-        <EntryList title="借款录入" icon="💰" type="loan" entries={loans} setEntries={setLoans} />
-        <EntryList title="还款录入" icon="💸" type="repay" entries={repays} setEntries={setRepays} />
+        <EntryList type="loan" entries={loans} setEntries={setLoans} />
+        <EntryList type="repay" entries={repays} setEntries={setRepays} />
 
         <div className="calc-action">
           <Button type="primary" size="large" icon={<CalculatorOutlined />} onClick={handleCalculate}>

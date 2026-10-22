@@ -130,6 +130,12 @@ export function calculate({
   let eventIdx = 0;
   const warnings = [];
 
+  const lateEvents = events.filter((e) => e.date > endDate);
+  if (lateEvents.length > 0) {
+    const list = lateEvents.map((e) => `${e.date} ${e.type === "loan" ? "借款" : "还款"} ${fmt(e.amount)}`).join("、");
+    warnings.push(`以下 ${lateEvents.length} 笔晚于计息截止日 ${endDate}，未参与计算：${list}`);
+  }
+
   function appendInterestPeriod(curDate, nextDate) {
     const days = daysBetween(parseDate(curDate), parseDate(nextDate));
     if (days <= 0) return;

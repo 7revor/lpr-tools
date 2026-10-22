@@ -35,6 +35,31 @@ describe('calculate 基础校验', () => {
   });
 });
 
+describe('截止日之后的事件', () => {
+  it('不参与计算并给出警告', () => {
+    const res = calculate({
+      ...base, endDate: '2024-06-30',
+      loans: [{ date: '2024-01-01', amount: 10000 }, { date: '2024-08-01', amount: 5000 }],
+      repays: [{ date: '2024-07-01', amount: 100, mode: '先息后本' }],
+    });
+    expect(res.totalLoan).toBe(10000);
+    expect(res.totalRepay).toBe(0);
+    expect(res.warnings).toEqual([
+      '以下 2 笔晚于计息截止日 2024-06-30，未参与计算：2024-07-01 还款 100.00、2024-08-01 借款 5000.00',
+    ]);
+  });
+
+  it('截止日当天的还款参与计算', () => {
+    const res = calculate({
+      ...base, endDate: '2024-06-30',
+      loans: [{ date: '2024-01-01', amount: 10000 }],
+      repays: [{ date: '2024-06-30', amount: 100, mode: '先息后本' }],
+    });
+    expect(res.totalRepay).toBe(100);
+    expect(res.warnings).toEqual([]);
+  });
+});
+
 describe('LPR 浮动计息', () => {
   const args = { ...base, endDate: '2024-12-31', loans: [{ date: '2024-01-01', amount: 10000 }] };
 

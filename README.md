@@ -27,8 +27,10 @@
 
 - 日利率基数可选 **365 天** 或 **360 天**
 - 计息截止日期可自由指定
-- 结果表格展示：计息区间、类型、发生金额、剩余本金、LPR 基础利率、倍率/加点、年利率、计息天数、利息、备注
-- 汇总行显示：累计产生利息 / 已还利息 / 未还利息
+- 修改任一输入即**实时重新计算**，无法计算时直接在结果区说明原因
+- 汇总突出「本息合计（未还）」，并列出借还款总额、利息合计、已还/未还利息等
+- 结果表格展示：计息区间、类型、发生金额、年利率（含 LPR 与倍率/加点）、计息天数、利息、冲息、还本、剩余本金、备注
+- 页面滚动到录入区时，底部常驻显示本息合计，可一键跳到明细
 - 一键复制为 **Excel 制表符**格式或 **CSV** 格式，粘贴即用
 
 ### 数据持久化与导入导出
@@ -108,12 +110,18 @@ npx wrangler pages deploy
 src/
 ├── components/
 │   ├── SmartDatePicker.jsx   # 多格式智能日期输入（自动格式化/容错）
-│   ├── Settings.jsx          # 基础设置（日利率基数、截止日期）
+│   ├── Settings.jsx          # 计息设置（利率类型、期限、年天数、截止日、浮动方式）
+│   ├── MultiplierEditor.jsx  # LPR 倍率/加点分段
+│   ├── LprDataDrawer.jsx     # LPR 原始数据维护抽屉（粘贴导入、逐条编辑）
 │   ├── EntryList.jsx         # 借款/还款条目列表
-│   ├── LprConfig.jsx         # LPR 数据与倍率配置
-│   └── ResultTable.jsx       # 计算结果表格
+│   ├── ResultTable.jsx       # 计算结果（汇总 + 明细表）
+│   ├── SummaryBar.jsx        # 底部本息合计摘要条
+│   └── CardHeader.jsx        # 卡片标题栏
 ├── utils/
 │   ├── calculate.js          # 核心计息逻辑
+│   ├── date.js               # 日期解析与规范化
+│   ├── lprText.js            # 粘贴文本解析
+│   ├── format.js             # 金额千分位格式化
 │   └── clipboard.js          # Excel/CSV 复制
 ├── data/
 │   └── lpr.js                # 内置 LPR 历史数据

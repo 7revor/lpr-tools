@@ -14,6 +14,7 @@ export function copyTableAsText(result, separator = '\t') {
     totalLoan, totalRepay,
     totalInterest, totalInterestPaid,
     remainPrincipal, remainInterest,
+    totalOverpaid,
   } = result;
 
   const header = ['序号', '开始日期', '结束日期', '类型', '发生金额', 'LPR(%)', '倍率/加点', '年利率(%)', '计息天数', '本期利息', '冲息', '利息结余', '还本', '剩余本金', '备注'];
@@ -47,7 +48,7 @@ export function copyTableAsText(result, separator = '\t') {
     }
   });
 
-  // 汇总行与表格上方 summary-box 保持一致（同样 7 项、同样正负号）
+  // 汇总行与表格上方 summary-box 保持一致（同样 7 项、同样正负号；有溢缴时多一项）
   lines.push(summaryRow('借款总额', totalLoan.toFixed(2), separator));
   lines.push(summaryRow('还款总额', totalRepay.toFixed(2), separator));
   lines.push(summaryRow('剩余本金', remainPrincipal.toFixed(2), separator));
@@ -55,6 +56,7 @@ export function copyTableAsText(result, separator = '\t') {
   lines.push(summaryRow('已还利息', totalInterestPaid.toFixed(2), separator));
   lines.push(summaryRow('未还利息', remainInterest.toFixed(2), separator));
   lines.push(summaryRow('本息合计(未还)', (remainPrincipal + remainInterest).toFixed(2), separator));
+  if (totalOverpaid > 0) lines.push(summaryRow('溢缴金额(未冲抵)', totalOverpaid.toFixed(2), separator));
 
   return lines.join('\n');
 }

@@ -117,7 +117,9 @@ export function calculate({
   let totalLoan = 0;
   let totalRepay = 0;
   let totalPrincipalPaid = 0;
+  let totalOverpaid = 0;
   let eventIdx = 0;
+  const warnings = [];
 
   function appendInterestPeriod(curDate, nextDate) {
     const days = daysBetween(parseDate(curDate), parseDate(nextDate));
@@ -167,6 +169,15 @@ export function calculate({
     totalInterestPaid += interestPaid;
     totalPrincipalPaid += principalPaid;
 
+    // 还款超过当时全部应还本息的部分无处冲抵，单独记录并提示，避免金额凭空消失
+    const overpaid = Math.round((repayAmount - interestPaid - principalPaid) * 100) / 100;
+    let note = ev.note || ev.mode;
+    if (overpaid > 0) {
+      totalOverpaid += overpaid;
+      note += `；溢缴 ${overpaid.toFixed(2)}`;
+      warnings.push(`${ev.date} 还款 ${repayAmount.toFixed(2)} 超出当时应还本息，溢缴 ${overpaid.toFixed(2)} 未参与冲抵`);
+    }
+
     rows.push({
       dateStart: ev.date, dateEnd: "",
       type: "还款",
@@ -180,7 +191,7 @@ export function calculate({
       days: "",
       interest: "",
       interestBalance: accruedInterest.toFixed(2),
-      note: ev.note || ev.mode,
+      note,
       isEvent: true,
     });
   }
@@ -213,7 +224,9 @@ export function calculate({
     totalInterest: totalInterestAccrued,
     totalInterestPaid,
     totalPrincipalPaid,
+    totalOverpaid,
     remainPrincipal: principal,
     remainInterest: accruedInterest,
+    warnings,
   };
 }

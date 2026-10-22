@@ -61,6 +61,7 @@ function LprCalc() {
     try {
       const res = calculate({ rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, lprTerm, mergeLpr, loans, repays });
       setResult(res);
+      res.warnings.forEach((w) => message.warning(w));
       // 计算完成后自动暂存
       saveToStorage(collectState());
       setTimeout(() => {

@@ -173,6 +173,26 @@ describe('还款冲抵', () => {
     expect(notes).toEqual(['L', 'A', 'B', 'C', 'D', 'E']);
   });
 
+  it('超额还款记录溢缴金额并给出警告', () => {
+    const res = calculate({ ...fixed, repays: [{ date: '2024-03-01', amount: 50000, mode: '先息后本' }] });
+    expect(res.totalInterestPaid + res.totalPrincipalPaid + res.totalOverpaid).toBeCloseTo(res.totalRepay, 2);
+    expect(res.totalOverpaid).toBeCloseTo(50000 - 10060, 2);
+    expect(repayRows(res)[0].note).toContain('溢缴 39940.00');
+    expect(res.warnings).toHaveLength(1);
+  });
+
+  it('借款前的还款整笔计为溢缴', () => {
+    const res = calculate({ ...fixed, repays: [{ date: '2023-12-01', amount: 300, mode: '先本后息' }] });
+    expect(res.totalOverpaid).toBe(300);
+    expect(res.remainPrincipal).toBe(10000);
+  });
+
+  it('恰好还清时没有溢缴', () => {
+    const res = calculate({ ...fixed, repays: [{ date: '2024-03-01', amount: 10060, mode: '先本后息' }] });
+    expect(res.totalOverpaid).toBe(0);
+    expect(res.warnings).toEqual([]);
+  });
+
   it('全部还清后停止计息', () => {
     const res = calculate({ ...fixed, repays: [{ date: '2024-03-01', amount: 10060, mode: '先息后本' }] });
     expect(res.remainPrincipal).toBe(0);

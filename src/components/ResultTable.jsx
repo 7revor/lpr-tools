@@ -6,7 +6,7 @@ import { copyTableAsText, copyToClipboard } from '../utils/clipboard';
 const ResultTable = memo(function ResultTable({ result, showToast }) {
   if (!result) return null;
 
-  const { rows, totalLoan, totalRepay, totalInterest, totalInterestPaid, totalPrincipalPaid, remainPrincipal, remainInterest } = result;
+  const { rows, totalLoan, totalRepay, totalInterest, totalInterestPaid, totalPrincipalPaid, totalOverpaid, remainPrincipal, remainInterest } = result;
   console.log(rows);
   const handleCopyTab = useCallback(async () => {
     const text = copyTableAsText(result, '\t');
@@ -87,6 +87,12 @@ const ResultTable = memo(function ResultTable({ result, showToast }) {
           <div className="label">本息合计(未还)</div>
           <div className="value">¥{(remainPrincipal + remainInterest).toFixed(2)}</div>
         </div>
+        {totalOverpaid > 0 && (
+          <div className="summary-item">
+            <div className="label">溢缴金额(未冲抵)</div>
+            <div className="value danger">¥{totalOverpaid.toFixed(2)}</div>
+          </div>
+        )}
       </div>
 
       <Table

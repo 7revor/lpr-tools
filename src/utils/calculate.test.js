@@ -55,6 +55,35 @@ describe('日期格式校验', () => {
   });
 });
 
+describe('倍率/加点校验', () => {
+  const ok = { ...base, endDate: '2024-12-31', loans: [{ date: '2024-01-01', amount: 10000 }] };
+
+  it('倍率未填写时报错而不是按 0 计息', () => {
+    expect(() => calculate({ ...ok, multipliers: [{ startDate: '', value: null }] })).toThrow('首段倍率未填写');
+    expect(() => calculate({ ...ok, multipliers: [{ startDate: '', value: 1 }, { startDate: '2024-03-01', value: undefined }] }))
+      .toThrow('起始日期 2024-03-01 的倍率未填写');
+  });
+
+  it('倍率必须大于 0', () => {
+    expect(() => calculate({ ...ok, multipliers: [{ startDate: '', value: 0 }] })).toThrow('倍率必须大于 0');
+  });
+
+  it('加点模式允许 0 与负数', () => {
+    const res = calculate({ ...ok, lprMode: 'basis', multipliers: [{ startDate: '', value: -20 }] });
+    expect(periods(res)[0].rate).toBe('3.2500');
+    expect(periods(res)[0].multiplierLabel).toBe('-20BP');
+  });
+
+  it('没有任何分段时加点模式按 +0BP', () => {
+    const res = calculate({ ...ok, lprMode: 'basis', multipliers: [] });
+    expect(periods(res)[0].rate).toBe('3.4500');
+  });
+
+  it('固定利率模式不校验倍率', () => {
+    expect(() => calculate({ ...ok, rateType: 'fixed', multipliers: [{ startDate: '', value: null }] })).not.toThrow();
+  });
+});
+
 describe('截止日之后的事件', () => {
   it('不参与计算并给出警告', () => {
     const res = calculate({

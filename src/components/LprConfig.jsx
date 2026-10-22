@@ -108,7 +108,8 @@ const LprConfig = memo(function LprConfig({
   const updateMultiplier = useCallback((idx, field, value) => {
     setMultipliers((prev) =>
       prev.map((m, i) =>
-        i === idx ? { ...m, [field]: field === 'startDate' ? value : (value ?? 0) } : m
+        // 清空时保留 null，由计算前校验提示，而不是静默变成 0
+        i === idx ? { ...m, [field]: value } : m
       )
     );
   }, [setMultipliers]);
@@ -120,6 +121,13 @@ const LprConfig = memo(function LprConfig({
   const addMultiplier = useCallback(() => {
     setMultipliers((prev) => [...prev, { startDate: '', value: lprMode === 'multiplier' ? 1.0 : 0 }]);
   }, [setMultipliers, lprMode]);
+
+  // 倍率与加点的数值含义不同（×1.0 与 +1BP），切换模式时重置为对应模式的默认值
+  const changeLprMode = useCallback((mode) => {
+    if (mode === lprMode) return;
+    setLprMode(mode);
+    setMultipliers((prev) => prev.map((m) => ({ ...m, value: mode === 'multiplier' ? 1.0 : 0 })));
+  }, [lprMode, setLprMode, setMultipliers]);
 
   // lprColumns 只在 updateLpr/removeLpr 变化时重建（两者均为稳定引用）
   const lprColumns = useMemo(() => [
@@ -222,7 +230,7 @@ const LprConfig = memo(function LprConfig({
         </Radio.Group>
       </div>
 
-      <Radio.Group value={lprMode} onChange={(e) => setLprMode(e.target.value)} style={{ marginBottom: 12 }}>
+      <Radio.Group value={lprMode} onChange={(e) => changeLprMode(e.target.value)} style={{ marginBottom: 12 }}>
         <Radio value="multiplier">倍率模式</Radio>
         <Radio value="basis">加点模式 (BP)</Radio>
       </Radio.Group>

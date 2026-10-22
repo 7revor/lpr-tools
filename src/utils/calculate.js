@@ -17,7 +17,8 @@ function createRateResolver({ rateType, fixedRate, lprData, multipliers, lprMode
 
   const sortedLpr = [...lprData].sort((a, b) => a.date.localeCompare(b.date));
   const sortedM = [...multipliers].sort((a, b) => (a.startDate || "").localeCompare(b.startDate || ""));
-  const defaultM = sortedM[0]?.value ?? 1;
+  // 没有任何分段时：倍率模式默认 ×1，加点模式默认 +0BP
+  const defaultM = sortedM[0]?.value ?? (lprMode === "multiplier" ? 1 : 0);
 
   return (dateStr) => {
     const r = sortedLpr.findLast((x) => x.date <= dateStr);
@@ -91,6 +92,20 @@ function assertDates({ rateType, endDate, events, lprData, multipliers }) {
   }
 }
 
+// 倍率/加点值为空时不能按 0 处理（倍率 0 会让利率归零），必须显式填写
+function assertMultipliers({ rateType, multipliers, lprMode }) {
+  if (rateType !== "lpr") return;
+  for (const m of multipliers) {
+    const label = m.startDate ? `起始日期 ${m.startDate} 的` : "首段";
+    if (typeof m.value !== "number" || !Number.isFinite(m.value)) {
+      throw new Error(`${label}${lprMode === "multiplier" ? "倍率" : "加点值"}未填写`);
+    }
+    if (lprMode === "multiplier" && m.value <= 0) {
+      throw new Error(`${label}倍率必须大于 0`);
+    }
+  }
+}
+
 // 借款/事件行基础模板，金额参数均为分
 function makeEventRow(date, type, amountCents, principalCents, note, interestBalanceCents = 0) {
   return {
@@ -131,6 +146,7 @@ export function calculate({
   const typeOrder = { loan: 0, repay: 1 };
   events.sort((a, b) => a.date.localeCompare(b.date) || typeOrder[a.type] - typeOrder[b.type]);
   assertDates({ rateType, endDate, events, lprData, multipliers });
+  assertMultipliers({ rateType, multipliers, lprMode });
 
   const allDates = collectBreakpoints({ rateType, endDate, events, lprData, multipliers, lprTerm, mergeLpr });
   const resolveRate = createRateResolver({ rateType, fixedRate, lprData, multipliers, lprMode, lprTerm });

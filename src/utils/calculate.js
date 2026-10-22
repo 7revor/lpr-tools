@@ -7,22 +7,54 @@ function daysBetween(d1, d2) {
   return Math.round((d2 - d1) / 86400000);
 }
 
-function getEffectiveRate(dateStr, lprData, multipliers, lprMode, lprTerm = "1y") {
-  const sorted = [...lprData].sort((a, b) => a.date.localeCompare(b.date));
-  let lpr = 0;
-  for (const r of sorted) {
-    if (r.date <= dateStr) lpr = lprTerm === "5y" ? r.lpr5y : r.lpr1y;
+// 预先排序 LPR 与倍率数据，返回按日期查询生效利率的函数，避免每个计息段都重新排序
+function createRateResolver({ rateType, fixedRate, lprData, multipliers, lprMode, lprTerm }) {
+  if (rateType === "fixed") {
+    return () => ({ annualRate: fixedRate, lprBase: "", multiplierLabel: "固定" });
   }
 
+  const sortedLpr = [...lprData].sort((a, b) => a.date.localeCompare(b.date));
   const sortedM = [...multipliers].sort((a, b) => (a.startDate || "").localeCompare(b.startDate || ""));
-  let mValue = sortedM[0]?.value ?? 1;
-  for (const m of sortedM) {
-    if (!m.startDate || m.startDate <= dateStr) mValue = m.value;
+  const defaultM = sortedM[0]?.value ?? 1;
+
+  return (dateStr) => {
+    const r = sortedLpr.findLast((x) => x.date <= dateStr);
+    const lpr = r ? (lprTerm === "5y" ? r.lpr5y : r.lpr1y) : 0;
+    const m = sortedM.findLast((x) => !x.startDate || x.startDate <= dateStr);
+    const mValue = m ? m.value : defaultM;
+
+    const annualRate = lprMode === "multiplier" ? lpr * mValue : lpr + mValue / 100;
+    const multiplierLabel = lprMode === "multiplier" ? `×${mValue}` : mValue >= 0 ? `+${mValue}BP` : `${mValue}BP`;
+    return { annualRate, lprBase: lpr.toFixed(2), multiplierLabel };
+  };
+}
+
+// 收集所有分段点：事件日、截止日，以及 LPR 模式下的利率变动日、倍率/加点生效日
+function collectBreakpoints({ rateType, endDate, events, lprData, multipliers, lprTerm, mergeLpr }) {
+  const breakpoints = new Set([endDate]);
+  events.forEach((e) => breakpoints.add(e.date));
+
+  if (rateType === "lpr") {
+    if (mergeLpr) {
+      // 仅在所选期限的 LPR 值相对上一期发生变化时才设分段点，
+      // 从而把利率相同的连续月份合并为一段（事件、倍率/加点变化仍单独分段）
+      const sortedLpr = [...lprData].sort((a, b) => a.date.localeCompare(b.date));
+      let prevVal = null;
+      sortedLpr.forEach((r) => {
+        const val = lprTerm === "5y" ? r.lpr5y : r.lpr1y;
+        if (prevVal === null || val !== prevVal) breakpoints.add(r.date);
+        prevVal = val;
+      });
+    } else {
+      lprData.forEach((r) => breakpoints.add(r.date));
+    }
+    multipliers.forEach((m) => {
+      if (m.startDate) breakpoints.add(m.startDate);
+    });
   }
 
-  const finalRate = lprMode === "multiplier" ? lpr * mValue : lpr + mValue / 100;
-  const multiplierLabel = lprMode === "multiplier" ? `×${mValue}` : mValue >= 0 ? `+${mValue}BP` : `${mValue}BP`;
-  return { lpr, finalRate, multiplierLabel };
+  // endDate 已在集合中且是过滤后的最大值，排序后必为最后一项
+  return [...breakpoints].filter((d) => d <= endDate).sort();
 }
 
 // 借款/事件行基础模板，interestBalance 传入当前利息结余
@@ -56,8 +88,6 @@ export function calculate({
 
   if (validLoans.length === 0) throw new Error("请至少输入一笔借款");
 
-  const endD = parseDate(endDate);
-
   const events = [];
   validLoans.forEach((l) => events.push({ date: l.date, amount: l.amount, type: "loan", note: l.note || "" }));
   validRepays.forEach((r) =>
@@ -65,31 +95,8 @@ export function calculate({
   );
   events.sort((a, b) => a.date.localeCompare(b.date) || (a.type === "loan" ? -1 : 1));
 
-  const breakpoints = new Set();
-  breakpoints.add(endDate);
-  events.forEach((e) => breakpoints.add(e.date));
-
-  if (rateType === "lpr") {
-    if (mergeLpr) {
-      // 仅在所选期限的 LPR 值相对上一期发生变化时才设分段点，
-      // 从而把利率相同的连续月份合并为一段（事件、倍率/加点变化仍单独分段）
-      const sortedLpr = [...lprData].sort((a, b) => a.date.localeCompare(b.date));
-      let prevVal = null;
-      sortedLpr.forEach((r) => {
-        const val = lprTerm === "5y" ? r.lpr5y : r.lpr1y;
-        if (prevVal === null || val !== prevVal) breakpoints.add(r.date);
-        prevVal = val;
-      });
-    } else {
-      lprData.forEach((r) => breakpoints.add(r.date));
-    }
-    multipliers.forEach((m) => {
-      if (m.startDate) breakpoints.add(m.startDate);
-    });
-  }
-
-  const allDates = [...breakpoints].filter((d) => d <= endDate).sort();
-  if (!allDates.includes(endDate)) allDates.push(endDate);
+  const allDates = collectBreakpoints({ rateType, endDate, events, lprData, multipliers, lprTerm, mergeLpr });
+  const resolveRate = createRateResolver({ rateType, fixedRate, lprData, multipliers, lprMode, lprTerm });
 
   const rows = [];
   let principal = 0;
@@ -102,25 +109,10 @@ export function calculate({
   let eventIdx = 0;
 
   function appendInterestPeriod(curDate, nextDate) {
-    const d1 = parseDate(curDate);
-    const d2 = parseDate(nextDate);
-    if (d2 > endD || d1 >= endD) return;
-    const actualEnd = d2 <= endD ? d2 : endD;
-    const days = daysBetween(d1, actualEnd);
+    const days = daysBetween(parseDate(curDate), parseDate(nextDate));
     if (days <= 0) return;
 
-    let annualRate, lprBase, multiplierLabel;
-    if (rateType === "fixed") {
-      annualRate = fixedRate;
-      lprBase = "";
-      multiplierLabel = "固定";
-    } else {
-      const r = getEffectiveRate(curDate, lprData, multipliers, lprMode, lprTerm);
-      annualRate = r.finalRate;
-      lprBase = r.lpr.toFixed(2);
-      multiplierLabel = r.multiplierLabel;
-    }
-
+    const { annualRate, lprBase, multiplierLabel } = resolveRate(curDate);
     const dailyRate = annualRate / 100 / dayBase;
     const interest = principal * dailyRate * days;
     accruedInterest += interest;
@@ -144,107 +136,62 @@ export function calculate({
     });
   }
 
+  function applyRepay(ev) {
+    const repayAmount = ev.amount;
+    totalRepay += repayAmount;
+
+    let interestPaid = 0;
+    let principalPaid = 0;
+
+    if (ev.mode === "先息后本") {
+      interestPaid = Math.min(repayAmount, accruedInterest);
+      principalPaid = Math.min(repayAmount - interestPaid, principal);
+    } else {
+      // 先本后息
+      principalPaid = Math.min(repayAmount, principal);
+      interestPaid = Math.min(repayAmount - principalPaid, accruedInterest);
+    }
+    accruedInterest -= interestPaid;
+    principal -= principalPaid;
+    totalInterestPaid += interestPaid;
+    totalPrincipalPaid += principalPaid;
+
+    rows.push({
+      dateStart: ev.date, dateEnd: "",
+      type: "还款",
+      amount: repayAmount,
+      interestOffset: interestPaid > 0 ? interestPaid.toFixed(2) : "",
+      principalOffset: principalPaid > 0 ? principalPaid.toFixed(2) : "",
+      principal,
+      lprBase: "",
+      multiplierLabel: "",
+      rate: "",
+      days: "",
+      interest: "",
+      interestBalance: accruedInterest.toFixed(2),
+      note: ev.note || ev.mode,
+      isEvent: true,
+    });
+  }
+
   for (let i = 0; i < allDates.length; i++) {
     const curDate = allDates[i];
 
-    while (eventIdx < events.length && events[eventIdx].date <= curDate) {
+    // 事件日期均已加入分段点，这里只会处理恰好落在 curDate 的事件
+    while (eventIdx < events.length && events[eventIdx].date === curDate) {
       const ev = events[eventIdx];
-      if (ev.date === curDate) {
-        if (ev.type === "loan") {
-          principal += ev.amount;
-          totalLoan += ev.amount;
-          rows.push(makeEventRow(curDate, "借款", ev.amount, principal, ev.note, accruedInterest));
-        } else {
-          const repayAmount = ev.amount;
-          totalRepay += repayAmount;
-
-          let interestPaid = 0;
-          let principalPaid = 0;
-
-          if (ev.mode === "先息后本") {
-            interestPaid = Math.min(repayAmount, accruedInterest);
-            accruedInterest -= interestPaid;
-            totalInterestPaid += interestPaid;
-            const remaining = repayAmount - interestPaid;
-            principalPaid = Math.min(remaining, principal);
-            principal -= principalPaid;
-            if (principal < 0) principal = 0;
-          } else {
-            // 先本后息
-            principalPaid = Math.min(repayAmount, principal);
-            principal -= principalPaid;
-            if (principal < 0) principal = 0;
-            const remaining = repayAmount - principalPaid;
-            interestPaid = Math.min(remaining, accruedInterest);
-            accruedInterest -= interestPaid;
-            totalInterestPaid += interestPaid;
-          }
-          totalPrincipalPaid += principalPaid;
-
-          rows.push({
-            dateStart: curDate, dateEnd: "",
-            type: "还款",
-            amount: repayAmount,
-            interestOffset: interestPaid > 0 ? interestPaid.toFixed(2) : "",
-            principalOffset: principalPaid > 0 ? principalPaid.toFixed(2) : "",
-            principal,
-            lprBase: "",
-            multiplierLabel: "",
-            rate: "",
-            days: "",
-            interest: "",
-            interestBalance: accruedInterest.toFixed(2),
-            note: ev.note || ev.mode,
-            isEvent: true,
-          });
-        }
+      if (ev.type === "loan") {
+        principal += ev.amount;
+        totalLoan += ev.amount;
+        rows.push(makeEventRow(curDate, "借款", ev.amount, principal, ev.note, accruedInterest));
+      } else {
+        applyRepay(ev);
       }
       eventIdx++;
     }
 
     if (i < allDates.length - 1 && principal > 0) {
       appendInterestPeriod(curDate, allDates[i + 1]);
-    }
-  }
-
-  if (principal > 0 && events.length > 0) {
-    const lastDate = allDates[allDates.length - 1];
-    const lastD = parseDate(lastDate);
-    if (lastD < endD && lastDate !== endDate) {
-      const days = daysBetween(lastD, endD);
-      if (days > 0) {
-        let annualRate, lprBase, multiplierLabel;
-        if (rateType === "fixed") {
-          annualRate = fixedRate;
-          lprBase = "";
-          multiplierLabel = "固定";
-        } else {
-          const r = getEffectiveRate(lastDate, lprData, multipliers, lprMode, lprTerm);
-          annualRate = r.finalRate;
-          lprBase = r.lpr.toFixed(2);
-          multiplierLabel = r.multiplierLabel;
-        }
-        const dailyRate = annualRate / 100 / dayBase;
-        const interest = principal * dailyRate * days;
-        accruedInterest += interest;
-        totalInterestAccrued += interest;
-        rows.push({
-          dateStart: lastDate, dateEnd: endDate,
-          type: "计息",
-          amount: "",
-          interestOffset: "",
-          principalOffset: "",
-          principal,
-          lprBase,
-          multiplierLabel,
-          rate: annualRate.toFixed(4),
-          days,
-          interest: interest.toFixed(2),
-          interestBalance: accruedInterest.toFixed(2),
-          note: "",
-          isEvent: false,
-        });
-      }
     }
   }
 

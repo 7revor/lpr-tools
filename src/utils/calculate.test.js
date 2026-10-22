@@ -17,9 +17,12 @@ const base = {
 const periods = (res) => res.rows.filter((r) => !r.isEvent);
 const repayRows = (res) => res.rows.filter((r) => r.type === '还款');
 
-// 手工计算：Σ 本金 × 年利率 / 基数 × 天数
+// 手工计算：Σ round(本金 × 年利率 / 基数 × 天数, 2)，每段先舍入到分再累加
 function manual(principal, segs, dayBase = 365) {
-  return segs.reduce((s, [a, b, rate]) => s + principal * rate / 100 / dayBase * ((new Date(b) - new Date(a)) / 86400000), 0);
+  return segs.reduce((s, [a, b, rate]) => {
+    const seg = principal * rate / 100 / dayBase * ((new Date(b) - new Date(a)) / 86400000);
+    return s + Math.round(seg * 100) / 100;
+  }, 0);
 }
 
 describe('calculate 基础校验', () => {
@@ -110,6 +113,40 @@ describe('LPR 浮动计息', () => {
     ]);
     expect(res.totalInterest).toBeCloseTo(expected, 2);
     expect(periods(res)[0].multiplierLabel).toBe('+50BP');
+  });
+});
+
+describe('金额精度', () => {
+  const sumRows = (res) => periods(res).reduce((s, r) => s + Math.round(Number(r.interest) * 100), 0) / 100;
+
+  it('表格逐行利息之和等于利息合计（逐段四舍五入到分）', () => {
+    const amounts = [12345.67, 98765.43, 1000000, 333.33, 7777777.77, 0.01];
+    for (const amount of amounts) {
+      for (const value of [1, 1.3, 1.5, 4]) {
+        const res = calculate({
+          ...base, mergeLpr: false, multipliers: [{ startDate: '', value }],
+          endDate: '2026-06-30', loans: [{ date: '2019-09-01', amount }],
+          repays: [{ date: '2022-03-15', amount: amount / 3, mode: '先息后本' }],
+        });
+        expect(sumRows(res)).toBe(res.totalInterest);
+        expect(Math.round((res.totalInterestPaid + res.remainInterest) * 100)).toBe(Math.round(res.totalInterest * 100));
+      }
+    }
+  });
+
+  it('单段利息按分四舍五入', () => {
+    // 100 元 × 3.65% / 365 × 1 天 = 0.01 元；× 5 天 = 0.05 元；0.5 元 × 1 天 = 0.0005 元 → 0.00
+    const fixed = { ...base, rateType: 'fixed', fixedRate: 3.65 };
+    expect(calculate({ ...fixed, endDate: '2024-01-06', loans: [{ date: '2024-01-01', amount: 100 }] }).totalInterest).toBe(0.05);
+    expect(calculate({ ...fixed, endDate: '2024-01-02', loans: [{ date: '2024-01-01', amount: 0.5 }] }).totalInterest).toBe(0);
+  });
+
+  it('倍率乘积不带浮点尾差', () => {
+    const res = calculate({
+      ...base, multipliers: [{ startDate: '', value: 1.5 }],
+      endDate: '2024-07-01', loans: [{ date: '2024-01-01', amount: 10000 }],
+    });
+    expect(periods(res)[0].rate).toBe('5.1750');
   });
 });
 

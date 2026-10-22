@@ -32,7 +32,8 @@ function createRateResolver({ rateType, fixedRate, lprData, multipliers, lprMode
     const m = sortedM.findLast((x) => !x.startDate || x.startDate <= dateStr);
     const mValue = m ? m.value : defaultM;
 
-    const annualRate = lprMode === "multiplier" ? lpr * mValue : lpr + mValue / 100;
+    // 去掉 3.45 × 1.5 = 5.175000000000001 这类浮点尾差
+    const annualRate = Number((lprMode === "multiplier" ? lpr * mValue : lpr + mValue / 100).toFixed(8));
     const multiplierLabel = lprMode === "multiplier" ? `×${mValue}` : mValue >= 0 ? `+${mValue}BP` : `${mValue}BP`;
     return { annualRate, lprBase: lpr.toFixed(2), multiplierLabel };
   };
@@ -66,13 +67,20 @@ function collectBreakpoints({ rateType, endDate, events, lprData, multipliers, l
   return [...breakpoints].filter((d) => d <= endDate).sort();
 }
 
-// 借款/事件行基础模板，interestBalance 传入当前利息结余
-function makeEventRow(date, type, amount, principal, note, interestBalance = 0) {
+// 金额内部统一以「分」为整数运算，避免浮点累加误差；对外输出仍为元
+const toCents = (yuan) => Math.round(yuan * 100);
+const toYuan = (cents) => cents / 100;
+const fmt = (cents) => toYuan(cents).toFixed(2);
+// 四舍五入到整数分；先截到 6 位小数，消除 12.4999999999 这类浮点尾差对进位的影响
+const roundCents = (x) => Math.round(Number(x.toFixed(6)));
+
+// 借款/事件行基础模板，金额参数均为分
+function makeEventRow(date, type, amountCents, principalCents, note, interestBalanceCents = 0) {
   return {
-    dateStart: date, dateEnd: "", type, amount, principal,
+    dateStart: date, dateEnd: "", type, amount: toYuan(amountCents), principal: toYuan(principalCents),
     interestOffset: "", principalOffset: "",
     lprBase: "", multiplierLabel: "", rate: "", days: "", interest: "",
-    interestBalance: interestBalance.toFixed(2),
+    interestBalance: fmt(interestBalanceCents),
     note, isEvent: true,
   };
 }
@@ -98,9 +106,9 @@ export function calculate({
   if (validLoans.length === 0) throw new Error("请至少输入一笔借款");
 
   const events = [];
-  validLoans.forEach((l) => events.push({ date: l.date, amount: l.amount, type: "loan", note: l.note || "" }));
+  validLoans.forEach((l) => events.push({ date: l.date, amount: toCents(l.amount), type: "loan", note: l.note || "" }));
   validRepays.forEach((r) =>
-    events.push({ date: r.date, amount: r.amount, type: "repay", note: r.note || "", mode: r.mode || "先息后本" }),
+    events.push({ date: r.date, amount: toCents(r.amount), type: "repay", note: r.note || "", mode: r.mode || "先息后本" }),
   );
   // 同日先借款后还款；同类型保持录入顺序（比较器须对称，返回 0 才能依赖稳定排序）
   const typeOrder = { loan: 0, repay: 1 };
@@ -109,6 +117,7 @@ export function calculate({
   const allDates = collectBreakpoints({ rateType, endDate, events, lprData, multipliers, lprTerm, mergeLpr });
   const resolveRate = createRateResolver({ rateType, fixedRate, lprData, multipliers, lprMode, lprTerm });
 
+  // 以下金额变量单位均为分
   const rows = [];
   let principal = 0;
   let accruedInterest = 0;
@@ -126,8 +135,8 @@ export function calculate({
     if (days <= 0) return;
 
     const { annualRate, lprBase, multiplierLabel } = resolveRate(curDate);
-    const dailyRate = annualRate / 100 / dayBase;
-    const interest = principal * dailyRate * days;
+    // 每段利息先四舍五入到分再累加，保证表格逐行利息之和等于合计
+    const interest = roundCents((principal * annualRate * days) / (100 * dayBase));
     accruedInterest += interest;
     totalInterestAccrued += interest;
 
@@ -137,13 +146,13 @@ export function calculate({
       amount: "",
       interestOffset: "",
       principalOffset: "",
-      principal,
+      principal: toYuan(principal),
       lprBase,
       multiplierLabel,
       rate: annualRate.toFixed(4),
       days,
-      interest: interest.toFixed(2),
-      interestBalance: accruedInterest.toFixed(2),
+      interest: fmt(interest),
+      interestBalance: fmt(accruedInterest),
       note: "",
       isEvent: false,
     });
@@ -170,27 +179,27 @@ export function calculate({
     totalPrincipalPaid += principalPaid;
 
     // 还款超过当时全部应还本息的部分无处冲抵，单独记录并提示，避免金额凭空消失
-    const overpaid = Math.round((repayAmount - interestPaid - principalPaid) * 100) / 100;
+    const overpaid = repayAmount - interestPaid - principalPaid;
     let note = ev.note || ev.mode;
     if (overpaid > 0) {
       totalOverpaid += overpaid;
-      note += `；溢缴 ${overpaid.toFixed(2)}`;
-      warnings.push(`${ev.date} 还款 ${repayAmount.toFixed(2)} 超出当时应还本息，溢缴 ${overpaid.toFixed(2)} 未参与冲抵`);
+      note += `；溢缴 ${fmt(overpaid)}`;
+      warnings.push(`${ev.date} 还款 ${fmt(repayAmount)} 超出当时应还本息，溢缴 ${fmt(overpaid)} 未参与冲抵`);
     }
 
     rows.push({
       dateStart: ev.date, dateEnd: "",
       type: "还款",
-      amount: repayAmount,
-      interestOffset: interestPaid > 0 ? interestPaid.toFixed(2) : "",
-      principalOffset: principalPaid > 0 ? principalPaid.toFixed(2) : "",
-      principal,
+      amount: toYuan(repayAmount),
+      interestOffset: interestPaid > 0 ? fmt(interestPaid) : "",
+      principalOffset: principalPaid > 0 ? fmt(principalPaid) : "",
+      principal: toYuan(principal),
       lprBase: "",
       multiplierLabel: "",
       rate: "",
       days: "",
       interest: "",
-      interestBalance: accruedInterest.toFixed(2),
+      interestBalance: fmt(accruedInterest),
       note,
       isEvent: true,
     });
@@ -219,14 +228,14 @@ export function calculate({
 
   return {
     rows,
-    totalLoan,
-    totalRepay,
-    totalInterest: totalInterestAccrued,
-    totalInterestPaid,
-    totalPrincipalPaid,
-    totalOverpaid,
-    remainPrincipal: principal,
-    remainInterest: accruedInterest,
+    totalLoan: toYuan(totalLoan),
+    totalRepay: toYuan(totalRepay),
+    totalInterest: toYuan(totalInterestAccrued),
+    totalInterestPaid: toYuan(totalInterestPaid),
+    totalPrincipalPaid: toYuan(totalPrincipalPaid),
+    totalOverpaid: toYuan(totalOverpaid),
+    remainPrincipal: toYuan(principal),
+    remainInterest: toYuan(accruedInterest),
     warnings,
   };
 }

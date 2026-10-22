@@ -26,4 +26,9 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    // 单元测试运行在 Node 中（如通过 process.env.TZ 切换时区）
+    files: ['**/*.test.js'],
+    languageOptions: { globals: globals.node },
+  },
 ])

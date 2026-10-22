@@ -10,10 +10,8 @@ export default function SummaryBar({ calc, targetId }) {
   useEffect(() => {
     const el = document.getElementById(targetId);
     if (!el) return undefined;
-    const observer = new IntersectionObserver(
-      ([entry]) => setTargetVisible(entry.isIntersecting),
-      { rootMargin: '0px 0px -80px 0px' },
-    );
+    // 结果区一露头就隐藏，避免摘要条盖住结果卡标题栏
+    const observer = new IntersectionObserver(([entry]) => setTargetVisible(entry.isIntersecting));
     observer.observe(el);
     return () => observer.disconnect();
   }, [targetId]);

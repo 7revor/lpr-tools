@@ -1,7 +1,7 @@
-import { memo, useCallback, useRef } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 import { DatePicker, App as AntdApp } from 'antd';
 import dayjs from 'dayjs';
-import { DATE_FORMATS, normalizeRawInput, tryParseDate, today } from '../utils/date';
+import { DATE_FORMATS, normalizeRawInput, tryParseDate } from '../utils/date';
 
 /**
  * SmartDatePicker
@@ -28,7 +28,7 @@ const SmartDatePicker = memo(function SmartDatePicker({
 
   // 始终持有最新的已提交值，避免 blur 时闭包读到过期 value
   const latestValueRef = useRef(value);
-  latestValueRef.current = value;
+  useEffect(() => { latestValueRef.current = value; }, [value]);
 
   // 通过 wrapper div 的原生 onInput 捕获用户真实键入的原始文本
   // （早于 antd 在 blur 时的内部处理，不会被还原）
@@ -58,11 +58,14 @@ const SmartDatePicker = memo(function SmartDatePicker({
 
     const parsed = tryParseDate(raw);
     if (!parsed) {
-      // 完全无法解析 → 回填今日并提示
-      const todayStr = today();
-      latestValueRef.current = todayStr;
-      onChange(todayStr);
-      message.warning(`"${raw}" 无法识别为有效日期，已自动填入今日`);
+      // 完全无法解析 → 保留原日期并提示；静默改成今日会让计息结果悄悄出错
+      // antd 在 blur 时已把输入框还原为上一次的有效值，这里无需再提交
+      const kept = latestValueRef.current;
+      message.warning(
+        kept
+          ? `"${raw}" 无法识别为有效日期，已保留原日期 ${kept}`
+          : `"${raw}" 无法识别为有效日期，请按 YYYY-MM-DD 格式输入`,
+      );
     } else {
       // 解析成功：如果 antd 内部已经回滚（未触发 onChange），主动提交正确值
       const dateStr = parsed.format('YYYY-MM-DD');

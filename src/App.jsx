@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ConfigProvider, App as AntdApp, Button, Space } from 'antd';
 import { ExportOutlined, ImportOutlined, DeleteOutlined, GithubOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
@@ -17,7 +17,8 @@ function loadFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch {
+  } catch (err) {
+    console.warn('读取暂存数据失败，将使用默认值', err);
     return null;
   }
 }
@@ -25,7 +26,10 @@ function loadFromStorage() {
 function saveToStorage(data) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch { /* ignore */ }
+  } catch (err) {
+    // 隐私模式或存储已满时写入会失败，不影响计算，仅记录
+    console.warn('暂存数据失败', err);
+  }
 }
 
 function LprCalc() {
@@ -57,13 +61,23 @@ function LprCalc() {
     lprData, loans, repays, multipliers,
   });
 
+  // 任一输入变化后防抖暂存，刷新页面不丢数据（此前仅在点击计算时保存）
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      saveToStorage({
+        version: 1,
+        rateType, fixedRate, dayBase, endDate, lprMode, lprTerm, mergeLpr,
+        lprData, loans, repays, multipliers,
+      });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [rateType, fixedRate, dayBase, endDate, lprMode, lprTerm, mergeLpr, lprData, loans, repays, multipliers]);
+
   const handleCalculate = () => {
     try {
       const res = calculate({ rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, lprTerm, mergeLpr, loans, repays });
       setResult(res);
       res.warnings.forEach((w) => message.warning(w));
-      // 计算完成后自动暂存
-      saveToStorage(collectState());
       setTimeout(() => {
         document.getElementById('result-section')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);

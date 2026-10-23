@@ -275,6 +275,9 @@ body {
   font-size: 13px;
   color: var(--text-2);
 }
+.lpr-drawer-note a {
+  white-space: nowrap;
+}
 
 /* ---------- Entries ---------- */
 .entry-card--repay .card-icon {
@@ -347,57 +350,51 @@ body {
   border-radius: 8px;
   text-align: center;
 }
+/* 汇总区是一条等式：本息合计 = 剩余本金 + 未还利息 */
 .result-summary {
-  display: grid;
-  grid-template-columns: minmax(260px, 340px) 1fr;
-  gap: 16px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 18px 24px;
   margin-bottom: 16px;
-}
-.result-hero {
-  padding: 18px 20px;
   border-radius: 10px;
   background: var(--primary-soft);
 }
-.result-hero-label {
+.sum-part {
+  min-width: 0;
+}
+.sum-label {
   font-size: 13px;
   color: var(--text-2);
 }
-.result-hero-value {
+.sum-value {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+}
+.sum-part--hero .sum-value {
   font-size: 30px;
   font-weight: 700;
   line-height: 1.25;
   color: var(--primary-strong);
-  margin: 4px 0 8px;
   letter-spacing: -0.01em;
 }
-.result-hero-sub {
-  font-size: 12.5px;
-  color: var(--text-2);
-}
-.result-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.stat {
-  padding: 12px 16px;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  margin: 0 -1px -1px 0;
-}
-.stat dt {
-  font-size: 12.5px;
+.sum-detail {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 4px;
+  margin-top: 2px;
+  font-size: 12px;
   color: var(--text-3);
 }
-.stat dd {
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--text);
+.sum-detail > span {
+  white-space: nowrap;
 }
-.stat--warning dd {
-  color: var(--warning);
+.sum-op {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-3);
 }
 .result-alert {
   margin-bottom: 16px;
@@ -554,17 +551,27 @@ body {
     flex-direction: column;
     align-items: flex-start;
   }
-  .result-hero-value {
+  /* 窄屏：合计独占一行，本金与利息并排 */
+  .result-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 10px 12px;
+    padding: 14px 16px;
+  }
+  .sum-part--hero {
+    grid-column: 1 / -1;
+  }
+  .sum-op--eq {
+    display: none;
+  }
+  .sum-part--hero .sum-value {
     font-size: 26px;
   }
-  .result-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .sum-value {
+    font-size: 16px;
   }
-  .stat {
-    padding: 10px 12px;
-  }
-  .stat dd {
-    font-size: 15px;
+  .sum-detail {
+    font-size: 11.5px;
   }
   .summary-bar {
     bottom: 10px;
@@ -580,12 +587,6 @@ body {
   }
   .summary-bar-sub {
     display: none;
-  }
-}
-
-@media (max-width: 900px) {
-  .result-summary {
-    grid-template-columns: 1fr;
   }
 }
 

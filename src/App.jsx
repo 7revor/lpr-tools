@@ -211,7 +211,7 @@ function LprCalc() {
         <EntryList type="loan" entries={loans} setEntries={setLoans} />
         <EntryList type="repay" entries={repays} setEntries={setRepays} />
 
-        <ResultTable calc={calc} endDate={endDate} showToast={showToast} />
+        <ResultTable calc={calc} showToast={showToast} />
       </main>
 
       <SummaryBar calc={calc} targetId="result-section" />

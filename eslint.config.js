@@ -5,7 +5,8 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', '.wrangler']),
+  // .claude 下有 git worktree（各自带源码与 dist），在主目录运行时不应被扫到
+  globalIgnores(['dist', '.wrangler', '.claude']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

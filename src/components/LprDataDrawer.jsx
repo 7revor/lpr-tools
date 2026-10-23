@@ -2,11 +2,10 @@ import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { Button, Drawer, InputNumber, Input, Table, Space, Grid } from 'antd';
 import { PlusOutlined, ReloadOutlined, DeleteOutlined, ExportOutlined } from '@ant-design/icons';
 import SmartDatePicker from './SmartDatePicker';
-import { DEFAULT_LPR } from '../data/lpr';
 import { parseLprText } from '../utils/lprText';
 import { today } from '../utils/date';
-
-const BOC_LPR_URL = 'https://www.boc.cn/fimarkets/lilv/fd32/201310/t20131031_2591219.html';
+import { BOC_LPR_URL } from '../utils/bocLpr';
+import { baselineLpr } from '../utils/lprSync';
 
 // LPR 表格数字单元格：本地 state，仅 blur 时提交父级，避免每次击键都触发整表重渲染
 const EditableNumberCell = memo(function EditableNumberCell({ initialValue, rowIdx, field, onCommit }) {
@@ -107,7 +106,7 @@ const LprDataDrawer = memo(function LprDataDrawer({ open, onClose, lprData, setL
   }, [pasteText, setLprData, showToast]);
 
   const resetToDefault = useCallback(() => {
-    setLprData(JSON.parse(JSON.stringify(DEFAULT_LPR)));
+    setLprData(baselineLpr());
     showToast('已恢复内置LPR数据');
   }, [setLprData, showToast]);
 
@@ -165,6 +164,9 @@ const LprDataDrawer = memo(function LprDataDrawer({ open, onClose, lprData, setL
             打开中国银行 LPR 页面 <ExportOutlined />
           </a>
         </div>
+        <p className="hint-text">
+          每月 20 日发布的新一期会在打开页面时自动追加，一般无需手动更新。
+        </p>
         <p className="hint-text">
           每行一条：<code>日期 1年期 5年期</code>，Tab、逗号或分号分隔，百分号可有可无。导入会替换下方全部数据。
         </p>

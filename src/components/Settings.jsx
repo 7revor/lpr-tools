@@ -7,7 +7,7 @@ import MultiplierEditor from './MultiplierEditor';
 import LprDataDrawer from './LprDataDrawer';
 import CardHeader from './CardHeader';
 
-// LPR 每月 20 日左右发布；最新一条超过这个天数仍未更新，提示用户核对
+// LPR 每月 20 日左右发布；最新一条超过这个天数仍未更新，说明自动更新可能失败，提示用户留意
 const LPR_STALE_DAYS = 40;
 
 function Field({ label, hint, children }) {
@@ -29,7 +29,7 @@ function Field({ label, hint, children }) {
 const Settings = memo(function Settings({
   rateType, setRateType, fixedRate, setFixedRate, dayBase, setDayBase, endDate, setEndDate,
   mergeLpr, setMergeLpr, lprMode, setLprMode, lprTerm, setLprTerm,
-  multipliers, setMultipliers, lprData, setLprData, showToast,
+  multipliers, setMultipliers, lprData,
 }) {
   const { modal } = AntdApp.useApp();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -162,20 +162,14 @@ const Settings = memo(function Settings({
                   </>
                 )}
               </span>
-              {lprStale && <Tag color="warning" variant="filled">可能需要更新</Tag>}
+              {lprStale && <Tag color="warning" variant="filled">可能未更新</Tag>}
               <RightOutlined className="lpr-source-arrow" />
             </button>
           </div>
         </div>
       )}
 
-      <LprDataDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        lprData={lprData}
-        setLprData={setLprData}
-        showToast={showToast}
-      />
+      <LprDataDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} lprData={lprData} />
     </section>
   );
 });

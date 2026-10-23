@@ -270,33 +270,10 @@ body {
 }
 
 /* ---------- LPR drawer ---------- */
-.paste-area {
-  margin-bottom: 16px;
-  padding: 14px;
-  background: var(--surface);
-  border-radius: 10px;
-  border: 1px dashed var(--border);
-}
-.paste-area-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 4px;
+.lpr-drawer-note {
+  margin-bottom: 12px;
   font-size: 13px;
-}
-.paste-area-title {
-  font-weight: 600;
-}
-.paste-area .hint-text {
-  margin-bottom: 8px;
-}
-.paste-area code {
-  background: #e9ecf3;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 12px;
+  color: var(--text-2);
 }
 
 /* ---------- Entries ---------- */

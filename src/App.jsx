@@ -4,8 +4,7 @@ import { ExportOutlined, ImportOutlined, DeleteOutlined, GithubOutlined, MoreOut
 import zhCN from 'antd/locale/zh_CN';
 import { calculate } from './utils/calculate';
 import { today } from './utils/date';
-import { baselineLpr } from './utils/lprSync';
-import { useLprAutoUpdate } from './hooks/useLprAutoUpdate';
+import { useLprData } from './hooks/useLprData';
 import Settings from './components/Settings';
 import EntryList from './components/EntryList';
 import ResultTable from './components/ResultTable';
@@ -51,20 +50,19 @@ function LprCalc() {
   const [lprMode, setLprMode] = useState(() => loadFromStorage()?.lprMode || 'multiplier');
   const [lprTerm, setLprTerm] = useState(() => loadFromStorage()?.lprTerm || '1y');
   const [mergeLpr, setMergeLpr] = useState(() => loadFromStorage()?.mergeLpr ?? true);
-  const [lprData, setLprData] = useState(() => loadFromStorage()?.lprData || baselineLpr());
   const [loans, setLoans] = useState(() => loadFromStorage()?.loans || [emptyLoan()]);
   const [repays, setRepays] = useState(() => loadFromStorage()?.repays || [emptyRepay()]);
   const [multipliers, setMultipliers] = useState(() => loadFromStorage()?.multipliers || [{ startDate: '', value: 1.0 }]);
 
   const importRef = useRef(null);
 
-  // 每月 20 日发布新一期后，打开页面时自动追加到 lprData 末尾
-  useLprAutoUpdate(lprData, setLprData, showToast);
+  // LPR 数据只读：内置数据 + 每月 20 日发布后自动拉取的新期数，不随用户数据保存、导入或导出
+  const lprData = useLprData(showToast);
 
   const collectState = () => ({
     version: 1,
     rateType, fixedRate, dayBase, endDate, lprMode, lprTerm, mergeLpr,
-    lprData, loans, repays, multipliers,
+    loans, repays, multipliers,
   });
 
   // 任一输入变化后防抖暂存，刷新页面不丢数据（此前仅在点击计算时保存）
@@ -73,11 +71,11 @@ function LprCalc() {
       saveToStorage({
         version: 1,
         rateType, fixedRate, dayBase, endDate, lprMode, lprTerm, mergeLpr,
-        lprData, loans, repays, multipliers,
+        loans, repays, multipliers,
       });
     }, 400);
     return () => clearTimeout(timer);
-  }, [rateType, fixedRate, dayBase, endDate, lprMode, lprTerm, mergeLpr, lprData, loans, repays, multipliers]);
+  }, [rateType, fixedRate, dayBase, endDate, lprMode, lprTerm, mergeLpr, loans, repays, multipliers]);
 
   // 输入变化即重新计算（纯前端、毫秒级），结果不会与当前输入脱节；
   // 无法计算时把原因展示在结果区，而不是弹一次性提示
@@ -117,7 +115,7 @@ function LprCalc() {
         if (data.lprMode) setLprMode(data.lprMode);
         if (data.lprTerm) setLprTerm(data.lprTerm);
         if (data.mergeLpr !== undefined) setMergeLpr(data.mergeLpr);
-        if (data.lprData) setLprData(data.lprData);
+        // 旧版导出文件中的 lprData 忽略，统一使用官方数据
         if (data.loans) setLoans(data.loans);
         if (data.repays) setRepays(data.repays);
         if (data.multipliers) setMultipliers(data.multipliers);
@@ -133,7 +131,7 @@ function LprCalc() {
   const handleClear = () => {
     modal.confirm({
       title: '确认清空',
-      content: '借还款记录、计息设置和 LPR 数据都会恢复为初始状态，此操作无法撤销。建议先导出备份。',
+      content: '借还款记录和计息设置都会恢复为初始状态，此操作无法撤销。建议先导出备份。',
       okType: 'danger',
       okText: '清空',
       cancelText: '取消',
@@ -145,7 +143,6 @@ function LprCalc() {
         setLprMode('multiplier');
         setLprTerm('1y');
         setMergeLpr(true);
-        setLprData(baselineLpr());
         // 与首次打开保持一致：各留一行空白录入
         setLoans([emptyLoan()]);
         setRepays([emptyRepay()]);
@@ -208,8 +205,7 @@ function LprCalc() {
           lprMode={lprMode} setLprMode={setLprMode}
           lprTerm={lprTerm} setLprTerm={setLprTerm}
           multipliers={multipliers} setMultipliers={setMultipliers}
-          lprData={lprData} setLprData={setLprData}
-          showToast={showToast}
+          lprData={lprData}
         />
 
         <EntryList type="loan" entries={loans} setEntries={setLoans} />

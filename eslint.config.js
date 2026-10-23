@@ -27,6 +27,11 @@ export default defineConfig([
     },
   },
   {
+    // Worker 运行在 Cloudflare 的 Service Worker 风格环境中
+    files: ['worker/**/*.js'],
+    languageOptions: { globals: globals.serviceworker },
+  },
+  {
     // 单元测试运行在 Node 中（如通过 process.env.TZ 切换时区）
     files: ['**/*.test.js'],
     languageOptions: { globals: globals.node },

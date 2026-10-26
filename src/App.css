@@ -89,14 +89,6 @@ header p {
   align-items: center;
   gap: 8px;
 }
-.card-title .badge {
-  font-size: 11px;
-  background: var(--primary);
-  color: #fff;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-weight: 500;
-}
 .card-title .icon {
   font-size: 18px;
 }
@@ -204,19 +196,43 @@ header p {
   font-size: 14px;
 }
 
-/* Paste area */
-.paste-area {
-  margin-bottom: 12px;
-  padding: 12px;
+/* LPR 数据概要：点击打开详情弹窗 */
+.lpr-source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px 12px;
   background: #f8f9fd;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  border: 1px dashed var(--border);
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s;
 }
-.paste-area code {
-  background: #e8ecf4;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 12px;
+.lpr-source:hover,
+.lpr-source:focus-visible {
+  border-color: var(--primary);
+}
+.lpr-source b {
+  font-weight: 600;
+  color: var(--text);
+}
+.lpr-source .ant-tag {
+  margin: 0;
+}
+.lpr-source-link {
+  margin-left: auto;
+  color: var(--primary);
+  white-space: nowrap;
+}
+.lpr-modal-note a {
+  white-space: nowrap;
 }
 
 /* Result table row highlights (antd Table rowClassName) */
@@ -226,6 +242,10 @@ header p {
 
 /* Responsive */
 @media (max-width: 768px) {
+  /* 窄屏只保留更新日期与期数，利率在详情弹窗中查看 */
+  .lpr-source-rates {
+    display: none;
+  }
   .container {
     padding: 12px;
   }

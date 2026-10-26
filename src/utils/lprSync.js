@@ -1,5 +1,5 @@
-// 前端自动追加新一期 LPR：何时向 /api/lpr 拉取、拉到后追加哪些行。
-// 用户的 lprData 可手动编辑，所以只追加比本地最新一期更晚的数据，已有行一律不改。
+// 前端自动更新 LPR：何时向 /api/lpr 拉取、拉到后追加哪些行。
+// 计算使用的数据 = 内置数据 + 拉取到的比内置更晚的期数，历史期数以内置数据为准。
 import { DEFAULT_LPR } from '../data/lpr';
 import { nextReleaseAt } from './bocLpr';
 
@@ -16,7 +16,6 @@ function latestIsoDate(rows) {
 
 export function shouldCheckRemote(localRows, lastCheckedAt, now = new Date()) {
   const latest = latestIsoDate(localRows);
-  // 本地 LPR 被清空时不自动补，尊重用户的操作
   if (!latest) return false;
   if (now < nextReleaseAt(latest)) return false;
   return !(lastCheckedAt && now.getTime() - lastCheckedAt < CHECK_INTERVAL_MS);
@@ -49,7 +48,7 @@ export function saveRemoteCache(cache) {
   }
 }
 
-// 内置数据 + 已拉取到的新期数：首次打开、恢复内置、清空数据时使用
+// 内置数据 + 已拉取到的新期数，即计算使用的 LPR 数据
 export function baselineLpr() {
   const base = DEFAULT_LPR.map((r) => ({ ...r }));
   return [...base, ...newerRows(base, loadRemoteCache()?.rows ?? [])];

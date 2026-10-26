@@ -1,22 +1,14 @@
 :root {
   --primary: #4f6ef7;
-  --primary-soft: #eef1fe;
-  --primary-strong: #3651d4;
-  --success: #1f9d61;
-  --success-soft: #e9f7f0;
-  --warning: #b7700a;
-  --warning-soft: #fdf5e6;
-  --danger: #d64545;
-  --bg: #f4f5f8;
+  --danger: #e74c5f;
+  --success: #34c77b;
+  --bg: #f4f6fb;
   --card: #ffffff;
-  --surface: #f8f9fb;
-  --border: #e6e9f0;
-  --text: #1f2633;
-  --text-2: #5b6577;
-  --text-3: #8a93a3;
-  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.05);
-  --radius: 12px;
-  --content-width: 1288px;
+  --border: #e2e6ef;
+  --text: #1e2a3a;
+  --text-secondary: #6b7a8d;
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --radius: 10px;
 }
 
 * {
@@ -31,614 +23,228 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
 }
 
-.num {
-  font-variant-numeric: tabular-nums;
-}
-
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13px;
-}
-
-/* ---------- Topbar ---------- */
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: saturate(180%) blur(8px);
-  border-bottom: 1px solid var(--border);
-}
-.topbar-inner {
-  max-width: var(--content-width);
-  margin: 0 auto;
-  padding: 10px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-.brand-mark {
-  flex: none;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  background: var(--primary);
-  color: #fff;
-  font-size: 18px;
-}
-.brand-text {
-  min-width: 0;
-}
-.brand-text h1 {
-  font-size: 16px;
-  font-weight: 650;
-  line-height: 1.3;
-  white-space: nowrap;
-}
-.brand-text p {
-  font-size: 12px;
-  color: var(--text-3);
-  line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: none;
-}
-
-/* ---------- Layout ---------- */
 .container {
-  max-width: var(--content-width);
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 20px 24px 120px;
+  padding: 20px;
 }
 
-/* ---------- Card ---------- */
+header {
+  text-align: center;
+  padding: 30px 0 20px;
+  position: relative;
+}
+header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary);
+}
+header p {
+  color: var(--text-secondary);
+  margin-top: 6px;
+  font-size: 14px;
+}
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.github-link:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: rgba(79, 110, 247, 0.06);
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+/* Card */
 .card {
   background: var(--card);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 20px 24px 24px;
-  margin-bottom: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
 }
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-.card-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-.card-heading h2 {
-  font-size: 16px;
+.card-title {
+  font-size: 17px;
   font-weight: 600;
-  line-height: 1.4;
-}
-.card-icon {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-size: 15px;
-}
-.card-meta {
-  font-size: 13px;
-  color: var(--text-3);
-}
-.card-extra {
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.card-title .badge {
+  font-size: 11px;
+  background: var(--primary);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+.card-title .icon {
+  font-size: 18px;
+}
+
+/* Settings grid */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+/* Form group — layout only, no input styles (antd handles those) */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.form-group label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Entry rows */
+.entry-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  padding: 10px;
+  background: #f8f9fd;
+  border-radius: 8px;
+}
+.entry-row .form-group {
+  flex: 1;
+  min-width: 120px;
+}
+
+/* Multiplier rows */
+.multiplier-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 8px;
+  padding: 10px;
+  background: #f8f9fd;
+  border-radius: 8px;
   flex-wrap: wrap;
 }
-
-/* ---------- Fields ---------- */
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 16px 20px;
+.multiplier-row .form-group {
+  flex: 1;
+  min-width: 120px;
 }
-.field-label {
+
+/* Summary */
+.summary-box {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-2);
-  margin-bottom: 6px;
-}
-.field-hint-icon {
-  color: var(--text-3);
-  font-size: 12px;
-  cursor: help;
-}
-.hint-text {
-  font-size: 12.5px;
-  color: var(--text-3);
-  line-height: 1.6;
-}
-
-/* ---------- LPR subsection ---------- */
-.subsection {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px dashed var(--border);
-}
-.subsection-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 12px;
-}
-.subsection-head h3 {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 2px;
-}
-
-.segment-list {
-  max-width: 640px;
-}
-.segment-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 32px;
-  gap: 8px 12px;
-  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-top: 8px;
   margin-bottom: 8px;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea11, #764ba211);
+  border-radius: 10px;
 }
-.segment-head {
+.summary-item {
+  text-align: center;
+  flex: 1;
+  min-width: 120px;
+}
+.summary-item .label {
   font-size: 12px;
-  color: var(--text-3);
-  margin-bottom: 4px;
+  color: var(--text-secondary);
 }
-.segment-add {
+.summary-item .value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary);
   margin-top: 2px;
 }
-
-.lpr-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px 24px;
-  margin-top: 16px;
-  padding: 10px 14px;
-  background: var(--surface);
-  border-radius: 8px;
-  font-size: 13px;
+.summary-item .value.danger {
+  color: var(--danger);
 }
-.inline-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-2);
-  cursor: pointer;
-}
-.lpr-source {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 0;
-  background: none;
-  padding: 2px 0;
-  font: inherit;
-  color: var(--text-2);
-  cursor: pointer;
-  text-align: left;
-}
-.lpr-source b {
-  font-weight: 600;
-  color: var(--text);
-}
-.lpr-source:hover,
-.lpr-source:focus-visible {
-  color: var(--primary);
-}
-.lpr-source-arrow {
-  font-size: 11px;
-}
-.lpr-source .ant-tag {
-  margin: 0;
-}
-
-/* ---------- LPR drawer ---------- */
-.lpr-drawer-note {
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: var(--text-2);
-}
-.lpr-drawer-note a {
-  white-space: nowrap;
-}
-
-/* ---------- Entries ---------- */
-.entry-card--repay .card-icon {
-  background: var(--success-soft);
+.summary-item .value.success {
   color: var(--success);
 }
-.entry-table {
-  /* 日期、金额列用固定宽度，借款与还款两张卡上下对齐 */
-  --entry-cols: 28px 168px 200px minmax(160px, 1fr) 32px;
-  margin-bottom: 12px;
-}
-.entry-table--repay {
-  --entry-cols: 28px 168px 200px 128px minmax(160px, 1fr) 32px;
-}
-.entry-row {
-  display: grid;
-  grid-template-columns: var(--entry-cols);
-  gap: 10px;
-  align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px solid #f0f2f6;
-}
-.entry-row:last-child {
-  border-bottom: 0;
-}
-.entry-head {
-  padding: 0 0 6px;
-  font-size: 12px;
-  color: var(--text-3);
-  border-bottom: 1px solid var(--border);
-}
-.entry-index {
-  color: var(--text-3);
-  font-size: 13px;
+
+/* Calc action */
+.calc-action {
   text-align: center;
+  margin: 24px 0;
 }
-.entry-index-label,
-.cell-label {
-  display: none;
-}
-.entry-remove {
-  color: var(--text-3);
-}
-.entry-remove:hover {
-  color: var(--danger) !important;
+
+/* Hints */
+.hint-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
 }
 .empty-hint {
   text-align: center;
-  color: var(--text-3);
-  padding: 20px;
-  font-size: 13px;
-  background: var(--surface);
-  border-radius: 8px;
+  color: var(--text-secondary);
+  padding: 30px;
+  font-size: 14px;
+}
+
+/* Paste area */
+.paste-area {
   margin-bottom: 12px;
-}
-
-/* ---------- Result ---------- */
-.result-card {
-  scroll-margin-top: 72px;
-}
-.result-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 28px 16px;
-  color: var(--text-3);
-  font-size: 13px;
-  background: var(--surface);
+  padding: 12px;
+  background: #f8f9fd;
   border-radius: 8px;
-  text-align: center;
+  border: 1px dashed var(--border);
 }
-/* 汇总区是一条等式：本息合计 = 剩余本金 + 未还利息 */
-.result-summary {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 18px 24px;
-  margin-bottom: 16px;
-  border-radius: 10px;
-  background: var(--primary-soft);
-}
-.sum-part {
-  min-width: 0;
-}
-.sum-label {
-  font-size: 13px;
-  color: var(--text-2);
-}
-.sum-value {
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.3;
-  color: var(--text);
-}
-.sum-part--hero .sum-value {
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--primary-strong);
-  letter-spacing: -0.01em;
-}
-.sum-detail {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 4px;
-  margin-top: 2px;
+.paste-area code {
+  background: #e8ecf4;
+  padding: 1px 6px;
+  border-radius: 4px;
   font-size: 12px;
-  color: var(--text-3);
-}
-.sum-detail > span {
-  white-space: nowrap;
-}
-.sum-op {
-  font-size: 22px;
-  line-height: 1;
-  color: var(--text-3);
-}
-.result-alert {
-  margin-bottom: 16px;
-}
-.warning-list {
-  padding-left: 18px;
-  font-size: 13px;
 }
 
-.result-table .ant-table-cell {
-  white-space: nowrap;
-}
-.result-table .col-period--stack .period {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.35;
-}
-.result-table .col-period--stack .period-arrow {
-  display: none;
-}
-.period-arrow {
-  color: var(--text-3);
-  margin: 0 6px;
-}
-.cell-muted {
-  color: var(--text-3);
-}
-.rate-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  line-height: 1.35;
-}
-.rate-detail {
-  font-size: 11.5px;
-  color: var(--text-3);
-}
-.result-table .ant-tag {
-  margin: 0;
-}
-.result-table .row-loan > td {
-  background: #f7f9ff;
-}
-.result-table .row-repay > td {
-  background: #f4fbf7;
-}
-.result-total-row > td {
-  background: var(--surface) !important;
-  font-weight: 600;
+/* Result table row highlights (antd Table rowClassName) */
+.row-offset td {
+  background: #fff8e1 !important;
 }
 
-/* ---------- Summary bar ---------- */
-.summary-bar {
-  position: fixed;
-  left: 50%;
-  bottom: 16px;
-  transform: translateX(-50%);
-  z-index: 30;
-  width: min(calc(100% - 32px), 720px);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 10px 12px 10px 18px;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: saturate(180%) blur(8px);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 8px 28px rgba(16, 24, 40, 0.12);
-  animation: summary-bar-in 0.18s ease-out;
-}
-@keyframes summary-bar-in {
-  from { opacity: 0; transform: translate(-50%, 8px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .summary-bar { animation: none; }
-}
-.summary-bar-main {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-}
-.summary-bar-label {
-  font-size: 12.5px;
-  color: var(--text-2);
-  white-space: nowrap;
-}
-.summary-bar-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--primary-strong);
-  white-space: nowrap;
-}
-.summary-bar-sub {
-  font-size: 12.5px;
-  color: var(--text-3);
-  white-space: nowrap;
-}
-.summary-bar-warn {
-  font-size: 12.5px;
-  color: var(--warning);
-  white-space: nowrap;
-}
-.summary-bar > .ant-btn {
-  margin-left: auto;
-  flex: none;
-}
-.summary-bar--error {
-  gap: 10px;
-}
-.summary-bar-icon {
-  color: var(--danger);
-  flex: none;
-}
-.summary-bar-error {
-  font-size: 13px;
-  color: var(--text);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ---------- Responsive ---------- */
-@media (max-width: 640px) {
-  .topbar-inner {
-    padding: 8px 12px;
-  }
-  .brand-text p {
-    display: none;
-  }
+/* Responsive */
+@media (max-width: 768px) {
   .container {
-    padding: 12px 12px 120px;
+    padding: 12px;
   }
-  .card {
-    padding: 16px;
-    border-radius: 10px;
+  header h1 {
+    font-size: 22px;
   }
-  .field-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-  .field-grid > .field:nth-child(-n + 2) {
-    grid-column: 1 / -1;
-  }
-  .lpr-source-rates {
-    display: none;
-  }
-  .subsection-head {
+  .entry-row,
+  .multiplier-row {
     flex-direction: column;
-    gap: 8px;
+    align-items: stretch;
   }
-  .lpr-footer {
+  .entry-row .form-group,
+  .multiplier-row .form-group {
+    min-width: 100%;
+  }
+  .summary-box {
     flex-direction: column;
-    align-items: flex-start;
   }
-  /* 窄屏：合计独占一行，本金与利息并排 */
-  .result-summary {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    gap: 10px 12px;
-    padding: 14px 16px;
-  }
-  .sum-part--hero {
-    grid-column: 1 / -1;
-  }
-  .sum-op--eq {
-    display: none;
-  }
-  .sum-part--hero .sum-value {
-    font-size: 26px;
-  }
-  .sum-value {
-    font-size: 16px;
-  }
-  .sum-detail {
-    font-size: 11.5px;
-  }
-  .summary-bar {
-    bottom: 10px;
-    gap: 10px;
-    padding: 8px 8px 8px 14px;
-  }
-  .summary-bar-main {
-    flex-direction: column;
-    gap: 0;
-  }
-  .summary-bar-label {
-    font-size: 11.5px;
-  }
-  .summary-bar-sub {
-    display: none;
-  }
-}
-
-/* 录入行在窄屏（手机、竖屏平板）上变为紧凑卡片 */
-@media (max-width: 820px) {
-  .entry-head {
-    display: none;
-  }
-  .entry-row {
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas:
-      'idx del'
-      'date amount'
-      'note note';
-    gap: 8px 10px;
-    padding: 10px 12px 12px;
-    margin-bottom: 8px;
-    background: var(--surface);
-    border: 0;
-    border-radius: 10px;
-  }
-  .entry-table--repay .entry-row {
-    grid-template-areas:
-      'idx del'
-      'date amount'
-      'mode note';
-  }
-  .entry-index {
-    grid-area: idx;
-    text-align: left;
-    font-weight: 500;
-    color: var(--text-2);
-  }
-  .entry-index > .num {
-    display: none;
-  }
-  .entry-index-label {
-    display: inline;
-  }
-  .entry-date { grid-area: date; }
-  .entry-amount { grid-area: amount; }
-  .entry-mode { grid-area: mode; }
-  .entry-note { grid-area: note; }
-  .entry-remove {
-    grid-area: del;
-    justify-self: end;
-    margin: -4px -6px -4px 0;
-  }
-  .cell-label {
-    display: block;
-    font-size: 12px;
-    color: var(--text-3);
-    margin-bottom: 2px;
+  .toolbar {
+    justify-content: center;
   }
 }

@@ -1,27 +1,23 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { ConfigProvider, App as AntdApp, Button, Dropdown } from 'antd';
-import { ExportOutlined, ImportOutlined, DeleteOutlined, GithubOutlined, MoreOutlined, CalculatorOutlined } from '@ant-design/icons';
+import { useState, useCallback, useRef } from 'react';
+import { ConfigProvider, App as AntdApp, Button, Space } from 'antd';
+import { ExportOutlined, ImportOutlined, DeleteOutlined, GithubOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
+import { DEFAULT_LPR } from './data/lpr';
 import { calculate } from './utils/calculate';
-import { today } from './utils/date';
-import { useLprData } from './hooks/useLprData';
 import Settings from './components/Settings';
+import LprConfig from './components/LprConfig';
 import EntryList from './components/EntryList';
 import ResultTable from './components/ResultTable';
-import SummaryBar from './components/SummaryBar';
 import './App.css';
 
 const STORAGE_KEY = 'lpr-calc-state';
-const GITHUB_URL = 'https://github.com/7revor/lpr-tools';
-const emptyLoan = () => ({ date: today(), amount: 0, note: '' });
-const emptyRepay = () => ({ date: today(), amount: 0, note: '', mode: '先息后本' });
+const today = () => new Date().toISOString().slice(0, 10);
 
 function loadFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch (err) {
-    console.warn('读取暂存数据失败，将使用默认值', err);
+  } catch {
     return null;
   }
 }
@@ -29,10 +25,7 @@ function loadFromStorage() {
 function saveToStorage(data) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (err) {
-    // 隐私模式或存储已满时写入会失败，不影响计算，仅记录
-    console.warn('暂存数据失败', err);
-  }
+  } catch { /* ignore */ }
 }
 
 function LprCalc() {
@@ -50,44 +43,33 @@ function LprCalc() {
   const [lprMode, setLprMode] = useState(() => loadFromStorage()?.lprMode || 'multiplier');
   const [lprTerm, setLprTerm] = useState(() => loadFromStorage()?.lprTerm || '1y');
   const [mergeLpr, setMergeLpr] = useState(() => loadFromStorage()?.mergeLpr ?? true);
-  const [loans, setLoans] = useState(() => loadFromStorage()?.loans || [emptyLoan()]);
-  const [repays, setRepays] = useState(() => loadFromStorage()?.repays || [emptyRepay()]);
+  const [lprData, setLprData] = useState(() => loadFromStorage()?.lprData || JSON.parse(JSON.stringify(DEFAULT_LPR)));
+  const [loans, setLoans] = useState(() => loadFromStorage()?.loans || [{ date: today(), amount: 0, note: '' }]);
+  const [repays, setRepays] = useState(() => loadFromStorage()?.repays || [{ date: today(), amount: 0, note: '', mode: '先息后本' }]);
   const [multipliers, setMultipliers] = useState(() => loadFromStorage()?.multipliers || [{ startDate: '', value: 1.0 }]);
+  const [result, setResult] = useState(null);
 
   const importRef = useRef(null);
-
-  // LPR 数据只读：内置数据 + 每月 20 日发布后自动拉取的新期数，不随用户数据保存、导入或导出
-  const lprData = useLprData(showToast);
 
   const collectState = () => ({
     version: 1,
     rateType, fixedRate, dayBase, endDate, lprMode, lprTerm, mergeLpr,
-    loans, repays, multipliers,
+    lprData, loans, repays, multipliers,
   });
 
-  // 任一输入变化后防抖暂存，刷新页面不丢数据（此前仅在点击计算时保存）
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      saveToStorage({
-        version: 1,
-        rateType, fixedRate, dayBase, endDate, lprMode, lprTerm, mergeLpr,
-        loans, repays, multipliers,
-      });
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [rateType, fixedRate, dayBase, endDate, lprMode, lprTerm, mergeLpr, loans, repays, multipliers]);
-
-  // 输入变化即重新计算（纯前端、毫秒级），结果不会与当前输入脱节；
-  // 无法计算时把原因展示在结果区，而不是弹一次性提示
-  const calc = useMemo(() => {
-    if (!loans.some((l) => l.date && l.amount > 0)) return { status: 'empty' };
+  const handleCalculate = () => {
     try {
-      const result = calculate({ rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, lprTerm, mergeLpr, loans, repays });
-      return { status: 'ok', result };
+      const res = calculate({ rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, lprTerm, mergeLpr, loans, repays });
+      setResult(res);
+      // 计算完成后自动暂存
+      saveToStorage(collectState());
+      setTimeout(() => {
+        document.getElementById('result-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } catch (err) {
-      return { status: 'error', message: err.message };
+      message.error(err.message);
     }
-  }, [rateType, fixedRate, dayBase, endDate, lprData, multipliers, lprMode, lprTerm, mergeLpr, loans, repays]);
+  };
 
   const handleExport = () => {
     const data = collectState();
@@ -115,10 +97,11 @@ function LprCalc() {
         if (data.lprMode) setLprMode(data.lprMode);
         if (data.lprTerm) setLprTerm(data.lprTerm);
         if (data.mergeLpr !== undefined) setMergeLpr(data.mergeLpr);
-        // 旧版导出文件中的 lprData 忽略，统一使用官方数据
+        if (data.lprData) setLprData(data.lprData);
         if (data.loans) setLoans(data.loans);
         if (data.repays) setRepays(data.repays);
         if (data.multipliers) setMultipliers(data.multipliers);
+        setResult(null);
         showToast('数据导入成功');
       } catch (err) {
         showToast('导入失败: ' + err.message, 'error');
@@ -131,7 +114,7 @@ function LprCalc() {
   const handleClear = () => {
     modal.confirm({
       title: '确认清空',
-      content: '借还款记录和计息设置都会恢复为初始状态，此操作无法撤销。建议先导出备份。',
+      content: '确定清空所有已输入的数据？',
       okType: 'danger',
       okText: '清空',
       cancelText: '取消',
@@ -143,79 +126,79 @@ function LprCalc() {
         setLprMode('multiplier');
         setLprTerm('1y');
         setMergeLpr(true);
-        // 与首次打开保持一致：各留一行空白录入
-        setLoans([emptyLoan()]);
-        setRepays([emptyRepay()]);
+        setLprData(JSON.parse(JSON.stringify(DEFAULT_LPR)));
+        setLoans([]);
+        setRepays([]);
         setMultipliers([{ startDate: '', value: 1.0 }]);
+        setResult(null);
         localStorage.removeItem(STORAGE_KEY);
         showToast('已清空所有数据');
       },
     });
   };
 
-  const dataMenu = {
-    items: [
-      { key: 'export', icon: <ExportOutlined />, label: '导出数据（JSON）' },
-      { key: 'import', icon: <ImportOutlined />, label: '导入数据（JSON）' },
-      { type: 'divider' },
-      { key: 'clear', icon: <DeleteOutlined />, label: '清空所有数据', danger: true },
-    ],
-    onClick: ({ key }) => {
-      if (key === 'export') handleExport();
-      else if (key === 'import') importRef.current?.click();
-      else if (key === 'clear') handleClear();
-    },
-  };
-
   return (
-    <>
-      <header className="topbar">
-        <div className="topbar-inner">
-          <div className="brand">
-            <span className="brand-mark" aria-hidden="true"><CalculatorOutlined /></span>
-            <div className="brand-text">
-              <h1>LPR 借贷利息计算</h1>
-              <p>多笔借还款 · LPR 分段倍率/加点 · 结果可直接粘贴到 Excel</p>
-            </div>
-          </div>
-          <div className="topbar-actions">
-            <Button
-              type="text"
-              icon={<GithubOutlined />}
-              href={GITHUB_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="在 GitHub 上查看源码"
-            />
-            <Dropdown menu={dataMenu} trigger={['click']} placement="bottomRight">
-              <Button icon={<MoreOutlined />}>数据</Button>
-            </Dropdown>
-            <input ref={importRef} type="file" accept=".json" hidden onChange={handleImport} />
-          </div>
-        </div>
+    <div className="container">
+      <header>
+        <h1>LPR 借贷利息计算系统</h1>
+        <p>支持多笔借款/还款、LPR分段倍率与固定利率、结果一键复制到Excel</p>
+        <a
+          className="github-link"
+          href="https://github.com/7revor/lpr-tools"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="在 GitHub 上查看源码"
+        >
+          <GithubOutlined />
+          <span>GitHub</span>
+        </a>
       </header>
 
-      <main className="container">
-        <Settings
-          rateType={rateType} setRateType={setRateType}
-          fixedRate={fixedRate} setFixedRate={setFixedRate}
-          dayBase={dayBase} setDayBase={setDayBase}
-          endDate={endDate} setEndDate={setEndDate}
-          mergeLpr={mergeLpr} setMergeLpr={setMergeLpr}
+      <div className="toolbar">
+        <Space wrap>
+          <Button icon={<ExportOutlined />} onClick={handleExport}>导出数据 (JSON)</Button>
+          <Button icon={<ImportOutlined />} onClick={() => importRef.current?.click()}>导入数据 (JSON)</Button>
+          <input ref={importRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+          <Button danger icon={<DeleteOutlined />} onClick={handleClear}>清空所有</Button>
+        </Space>
+      </div>
+
+      <Settings
+        rateType={rateType} setRateType={setRateType}
+        fixedRate={fixedRate} setFixedRate={setFixedRate}
+        dayBase={dayBase} setDayBase={setDayBase}
+        endDate={endDate} setEndDate={setEndDate}
+        mergeLpr={mergeLpr} setMergeLpr={setMergeLpr}
+      />
+
+      {rateType === 'lpr' && (
+        <LprConfig
+          lprData={lprData} setLprData={setLprData}
+          multipliers={multipliers} setMultipliers={setMultipliers}
           lprMode={lprMode} setLprMode={setLprMode}
           lprTerm={lprTerm} setLprTerm={setLprTerm}
-          multipliers={multipliers} setMultipliers={setMultipliers}
-          lprData={lprData}
+          showToast={showToast}
         />
+      )}
 
-        <EntryList type="loan" entries={loans} setEntries={setLoans} />
-        <EntryList type="repay" entries={repays} setEntries={setRepays} />
+      <EntryList title="借款录入" icon="💰" type="loan" entries={loans} setEntries={setLoans} />
+      <EntryList title="还款录入" icon="💸" type="repay" entries={repays} setEntries={setRepays} />
 
-        <ResultTable calc={calc} showToast={showToast} />
-      </main>
+      <div className="calc-action">
+        <Button
+          type="primary"
+          size="large"
+          onClick={handleCalculate}
+          style={{ padding: '0 56px', height: 48, fontSize: 16, borderRadius: 12 }}
+        >
+          🧮 开始计算
+        </Button>
+      </div>
 
-      <SummaryBar calc={calc} targetId="result-section" />
-    </>
+      <div id="result-section">
+        {result && <ResultTable result={result} showToast={showToast} />}
+      </div>
+    </div>
   );
 }
 
@@ -226,16 +209,8 @@ export default function App() {
       theme={{
         token: {
           colorPrimary: '#4f6ef7',
-          colorText: '#1f2633',
-          colorTextSecondary: '#5b6577',
-          colorBorder: '#d9dee8',
-          colorBorderSecondary: '#e8ebf1',
-          borderRadius: 8,
+          borderRadius: 6,
           fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
-        },
-        components: {
-          Segmented: { itemSelectedColor: '#4f6ef7' },
-          Table: { headerBg: '#f6f7fa', headerColor: '#5b6577', cellFontSizeSM: 13 },
         },
       }}
     >

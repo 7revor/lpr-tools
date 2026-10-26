@@ -81,9 +81,4 @@ export const DEFAULT_LPR = [
   { date: "2026-03-20", lpr1y: 3.0, lpr5y: 3.5 },
   { date: "2026-04-20", lpr1y: 3.0, lpr5y: 3.5 },
   { date: "2026-05-20", lpr1y: 3.0, lpr5y: 3.5 },
-  { date: "2026-06-22", lpr1y: 3.0, lpr5y: 3.5 },
-  { date: "2026-07-20", lpr1y: 3.0, lpr5y: 3.5 },
-  { date: "2026-08-20", lpr1y: 3.0, lpr5y: 3.5 },
-  { date: "2026-09-20", lpr1y: 3.0, lpr5y: 3.5 },
-  { date: "2026-10-20", lpr1y: 3.0, lpr5y: 3.5 },
 ];

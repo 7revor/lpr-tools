@@ -1,7 +1,46 @@
-import { memo, useCallback, useEffect, useRef } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import { DatePicker, App as AntdApp } from 'antd';
 import dayjs from 'dayjs';
-import { DATE_FORMATS, normalizeRawInput, tryParseDate } from '../utils/date';
+
+// 显示固定用第一个格式（YYYY-MM-DD），解析时依次尝试所有格式
+export const DATE_FORMATS = [
+  'YYYY-MM-DD',
+  'YYYY/MM/DD',
+  'YYYYMMDD',
+  'YYYY-M-D',
+  'YYYY/M/D',
+  'YYYY-M-DD',
+  'YYYY-MM-D',
+  'YYYY/M/DD',
+  'YYYY/MM/D',
+];
+
+/**
+ * 预处理：将 "2024-11-013"、"2024/011/3" 这类因 antd 自动补零导致的溢位格式
+ * 还原为合法的 "2024-11-13"，再交给 dayjs strict 解析。
+ * 仅处理有分隔符（- 或 /）的三段式，无分隔符格式原样返回。
+ */
+function normalizeRawInput(str) {
+  if (!str) return str;
+  const sep = str.includes('-') ? '-' : str.includes('/') ? '/' : null;
+  if (sep) {
+    const parts = str.split(sep);
+    if (parts.length === 3 && parts.every((p) => /^\d+$/.test(p))) {
+      return parts.map((p) => String(parseInt(p, 10))).join(sep);
+    }
+  }
+  return str;
+}
+
+export function tryParseDate(str) {
+  if (!str) return null;
+  const s = normalizeRawInput(str.trim());
+  for (const fmt of DATE_FORMATS) {
+    const d = dayjs(s, fmt, true); // strict mode
+    if (d.isValid()) return d;
+  }
+  return null;
+}
 
 /**
  * SmartDatePicker
@@ -28,7 +67,7 @@ const SmartDatePicker = memo(function SmartDatePicker({
 
   // 始终持有最新的已提交值，避免 blur 时闭包读到过期 value
   const latestValueRef = useRef(value);
-  useEffect(() => { latestValueRef.current = value; }, [value]);
+  latestValueRef.current = value;
 
   // 通过 wrapper div 的原生 onInput 捕获用户真实键入的原始文本
   // （早于 antd 在 blur 时的内部处理，不会被还原）
@@ -58,14 +97,11 @@ const SmartDatePicker = memo(function SmartDatePicker({
 
     const parsed = tryParseDate(raw);
     if (!parsed) {
-      // 完全无法解析 → 保留原日期并提示；静默改成今日会让计息结果悄悄出错
-      // antd 在 blur 时已把输入框还原为上一次的有效值，这里无需再提交
-      const kept = latestValueRef.current;
-      message.warning(
-        kept
-          ? `"${raw}" 无法识别为有效日期，已保留原日期 ${kept}`
-          : `"${raw}" 无法识别为有效日期，请按 YYYY-MM-DD 格式输入`,
-      );
+      // 完全无法解析 → 回填今日并提示
+      const today = dayjs().format('YYYY-MM-DD');
+      latestValueRef.current = today;
+      onChange(today);
+      message.warning(`"${raw}" 无法识别为有效日期，已自动填入今日`);
     } else {
       // 解析成功：如果 antd 内部已经回滚（未触发 onChange），主动提交正确值
       const dateStr = parsed.format('YYYY-MM-DD');

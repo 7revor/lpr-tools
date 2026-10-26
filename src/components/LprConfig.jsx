@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { Button, InputNumber, Radio, Input, Table, Space } from 'antd';
 import SmartDatePicker from './SmartDatePicker';
 import { PlusOutlined, ReloadOutlined, DeleteOutlined } from '@ant-design/icons';
-import { DEFAULT_LPR } from '../data/lpr';
+import { BOC_LPR_URL } from '../utils/bocLpr';
+import { baselineLpr } from '../utils/lprSync';
 
 function parseLprText(text) {
   const lines = text.trim().split('\n').filter((l) => l.trim());
@@ -117,7 +118,7 @@ const LprConfig = memo(function LprConfig({
   }, [pasteText, setLprData, showToast]);
 
   const resetToDefault = useCallback(() => {
-    setLprData(JSON.parse(JSON.stringify(DEFAULT_LPR)));
+    setLprData(baselineLpr());
     showToast('已恢复默认LPR数据');
   }, [setLprData, showToast]);
 
@@ -186,9 +187,12 @@ const LprConfig = memo(function LprConfig({
 
       <div className="paste-area">
         <p className="hint-text">
-          如有更新，请访问{' '}
+          每月 20 日发布的新一期会在打开页面时自动追加，一般无需手动更新。
+        </p>
+        <p className="hint-text">
+          如需手动更新，请访问{' '}
           <a
-            href="https://www.boc.cn/fimarkets/lilv/fd32/201310/t20131031_2591219.html"
+            href={BOC_LPR_URL}
             target="_blank"
             rel="noopener noreferrer"
           >

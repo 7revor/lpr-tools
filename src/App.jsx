@@ -2,8 +2,9 @@ import { useState, useCallback, useRef } from 'react';
 import { ConfigProvider, App as AntdApp, Button, Space } from 'antd';
 import { ExportOutlined, ImportOutlined, DeleteOutlined, GithubOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
-import { DEFAULT_LPR } from './data/lpr';
 import { calculate } from './utils/calculate';
+import { baselineLpr } from './utils/lprSync';
+import { useLprAutoUpdate } from './hooks/useLprAutoUpdate';
 import Settings from './components/Settings';
 import LprConfig from './components/LprConfig';
 import EntryList from './components/EntryList';
@@ -43,13 +44,16 @@ function LprCalc() {
   const [lprMode, setLprMode] = useState(() => loadFromStorage()?.lprMode || 'multiplier');
   const [lprTerm, setLprTerm] = useState(() => loadFromStorage()?.lprTerm || '1y');
   const [mergeLpr, setMergeLpr] = useState(() => loadFromStorage()?.mergeLpr ?? true);
-  const [lprData, setLprData] = useState(() => loadFromStorage()?.lprData || JSON.parse(JSON.stringify(DEFAULT_LPR)));
+  const [lprData, setLprData] = useState(() => loadFromStorage()?.lprData || baselineLpr());
   const [loans, setLoans] = useState(() => loadFromStorage()?.loans || [{ date: today(), amount: 0, note: '' }]);
   const [repays, setRepays] = useState(() => loadFromStorage()?.repays || [{ date: today(), amount: 0, note: '', mode: '先息后本' }]);
   const [multipliers, setMultipliers] = useState(() => loadFromStorage()?.multipliers || [{ startDate: '', value: 1.0 }]);
   const [result, setResult] = useState(null);
 
   const importRef = useRef(null);
+
+  // 每月 20 日发布新一期后，打开页面时自动追加到 lprData 末尾
+  useLprAutoUpdate(lprData, setLprData, showToast);
 
   const collectState = () => ({
     version: 1,
@@ -126,7 +130,7 @@ function LprCalc() {
         setLprMode('multiplier');
         setLprTerm('1y');
         setMergeLpr(true);
-        setLprData(JSON.parse(JSON.stringify(DEFAULT_LPR)));
+        setLprData(baselineLpr());
         setLoans([]);
         setRepays([]);
         setMultipliers([{ startDate: '', value: 1.0 }]);
